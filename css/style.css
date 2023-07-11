@@ -1,0 +1,69 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 0 15px;
+    line-height: 1.6;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 1em;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+h3 {
+    font-size: 1em;
+    color: #333;
+}
+
+p {
+    font-size: 15px;
+    /* margin-bottom: 10px; */
+}
+
+ol,
+ul {
+    margin-bottom: 10px;
+}
+
+ol {
+    counter-reset: item;
+}
+
+li {
+    font-size: 20px;
+}
+
+ol>li::before {
+    counter-increment: item;
+}
+
+ol>li {
+    counter-reset: subitem;
+}
+
+ol>li>ol>li::before {
+    counter-increment: subitem;
+    content: counters(subitem);
+    /* content: counters(item, ".") counters(subitem, ".") " "; */
+}
+
+ol>li>ol>li {
+    font-size: 0.9em;
+}
+
+ul li::before {
+    content: "";
+}
+
+li li li {
+    font-size: 0.9em;
+}
+
+.attention {
+    color: #f00;
+}
