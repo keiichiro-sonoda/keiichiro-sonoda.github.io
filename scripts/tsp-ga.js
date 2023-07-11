@@ -382,6 +382,7 @@ class RouteGraph {
                 borderColor: "rgba(192, 0, 0, 0.8)", // 線の色
                 borderWidth: 2,
                 lineTension: 0, // 線のカーブ（0で直線）
+                showLine: true
             }]
         };
 
@@ -403,6 +404,7 @@ class RouteGraph {
     update(individual) {
         // 経路データの更新
         this.data.datasets[1].data = applyPermutation(this.points.points, individual.getRoute());
+        this.data.datasets[1].data.push(this.data.datasets[1].data[0]);
         // チャートの更新
         this.chart.update();
     }
@@ -420,8 +422,10 @@ class FitnessGraph {
                 datasets: [{
                     label: "Fitness",
                     data: [],
+                    pointRadius: 1,
                     borderColor: "rgba(75, 192, 192, 1)",
                     backgroundColor: "rgba(75, 192, 192, 0.2)",
+                    borderWidth: 1,
                     fill: false
                 }]
             },
