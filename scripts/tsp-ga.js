@@ -355,52 +355,56 @@ class GeneticAlgorithmOX2Opt extends GeneticAlgorithmOX {
         }
     }
 }
-
+// RouteGraphクラス
 class RouteGraph {
+    // コンストラクタ
+    // canvasId: キャンバスのID
+    // points: 座標の配列
     constructor(canvasId, points) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext("2d");
         this.points = points;
+        
+        // チャートデータの初期化
         this.data = {
             datasets: [{
-                label: "Points",
-                data: this.points.points, //データセット1。ここに全ての点の座標を入れる。
-                pointRadius: 3,
-                pointBackgroundColor: "blue",
-                piontBorderColor: "blue",
-                showLine: false
+                label: "Points", // ポイントのラベル
+                data: this.points.points, // ポイントの座標
+                pointRadius: 2,
+                borderColor: "rgba(255, 200, 0, 1)",
+                backgroundColor: "rgba(255, 200, 0, 0.2)",
+                showLine: false // 線を表示しない
             }, {
-                label: "Route",
-                data: [], // データセット2。ここにTSPの解のパスの座標を入れる。
-                showLine: true,
-                fill: false,
-                borderColor: "red",
-                lineTension: 0
+                label: "Route", // 経路のラベル
+                data: [], // 経路の座標（初期状態では空）
+                showLine: true, // 線を表示する
+                fill: false, // 塗りつぶしをしない
+                borderColor: "rgba(192, 0, 0, 0.8)", // 線の色
+                borderWidth: 2,
+                lineTension: 0, // 線のカーブ（0で直線）
             }]
         };
+
+        // チャートの初期化
         this.chart = new Chart(this.ctx, {
-            type: "scatter",
+            type: "scatter", // 散布図
             data: this.data,
             options: {
                 animation: {
-                    duration: 0 // アニメーションを無効にする（大量のデータを動的に更新する場合に役立つ）
+                    duration: 0 // アニメーションを無効（大量のデータを動的に更新する際に有用）
                 }
             }
         });
     }
+
+    // チャートの更新
+    // individual: 経路情報
     update(individual) {
+        // 経路データの更新
         this.data.datasets[1].data = applyPermutation(this.points.points, individual.getRoute());
+        // チャートの更新
         this.chart.update();
     }
-}
-
-function applyPermutation(array, permutation) {
-    const result = [];
-    for (let i = 0; i < permutation.length; i++) {
-        const index = permutation[i];
-        result.push(array[index]);
-    }
-    return result;
 }
 
 class FitnessGraph {
@@ -524,6 +528,18 @@ function randomSelect(array, num) {
 // 重複検査
 function checkDuplicates(array) {
     return (new Set(array)).size !== array.length;
+}
+
+// 順列を適用する関数
+// array: 適用元の配列
+// permutation: 順列
+function applyPermutation(array, permutation) {
+    const result = [];
+    for (let i = 0; i < permutation.length; i++) {
+        const index = permutation[i];
+        result.push(array[index]);
+    }
+    return result;
 }
 
 function main() {
