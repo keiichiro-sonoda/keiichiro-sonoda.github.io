@@ -361,40 +361,46 @@ class RouteGraph {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext("2d");
         this.points = points;
-        // キャンバスの幅と高さを取得
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+        this.data = {
+            datasets: [{
+                label: "Points",
+                data: this.points.points, //データセット1。ここに全ての点の座標を入れる。
+                pointRadius: 3,
+                pointBackgroundColor: "blue",
+                piontBorderColor: "blue",
+                showLine: false
+            }, {
+                label: "Route",
+                data: [], // データセット2。ここにTSPの解のパスの座標を入れる。
+                showLine: true,
+                fill: false,
+                borderColor: "red",
+                lineTension: 0
+            }]
+        };
+        this.chart = new Chart(this.ctx, {
+            type: "scatter",
+            data: this.data,
+            options: {
+                animation: {
+                    duration: 0 // アニメーションを無効にする（大量のデータを動的に更新する場合に役立つ）
+                }
+            }
+        });
     }
-
-    // 描画メソッドで座標をスケーリング
-    drawPoints() {
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        for (let i = 0; i < this.points.getLength(); i++) {
-            this.ctx.beginPath();
-            const point = this.points.getPoint(i);
-            // 座標をスケーリング
-            this.ctx.arc(point.x * this.width, point.y * this.height, 3, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
-    }
-
-    drawRoute(individual) {
-        const route = individual.getRoute();
-        this.ctx.beginPath();
-        let start = this.points.getPoint(route[0]);
-        this.ctx.moveTo(start.x * this.width, start.y * this.height);
-        for (let i = 1; i < this.points.getLength(); i++) {
-            const point = this.points.getPoint(route[i]);
-            this.ctx.lineTo(point.x * this.width, point.y * this.height);
-        }
-        this.ctx.lineTo(start.x * this.width, start.y * this.height);
-        this.ctx.stroke();
-    }
-
     update(individual) {
-        this.drawPoints();
-        this.drawRoute(individual);
+        this.data.datasets[1].data = applyPermutation(this.points.points, individual.getRoute());
+        this.chart.update();
     }
+}
+
+function applyPermutation(array, permutation) {
+    const result = [];
+    for (let i = 0; i < permutation.length; i++) {
+        const index = permutation[i];
+        result.push(array[index]);
+    }
+    return result;
 }
 
 class FitnessGraph {
