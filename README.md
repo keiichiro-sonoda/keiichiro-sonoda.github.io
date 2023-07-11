@@ -1,1 +1,0 @@
-# keiichiro-sonoda.github.io
