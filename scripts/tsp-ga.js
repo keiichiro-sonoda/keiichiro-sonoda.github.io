@@ -104,7 +104,7 @@ class Population {
 }
 
 class FitnessLog {
-    constructor(maxDataPoints=1000) {
+    constructor(maxDataPoints=200) {
         this.log = [];
         this.generation = 0;
         this.generationInterval = 1; // the interval of generations to record data
@@ -392,7 +392,8 @@ class RouteGraph {
             options: {
                 animation: {
                     duration: 0 // アニメーションを無効（大量のデータを動的に更新する際に有用）
-                }
+                },
+                aspectRatio: 1
             }
         });
     }
