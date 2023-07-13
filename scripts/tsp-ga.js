@@ -1,8 +1,8 @@
 class Points {
-    constructor(num) {
+    constructor(nodeNum) {
         this.points = [];
         // 座標をランダムに生成
-        for (let i = 0; i < num; i++) {
+        for (let i = 0; i < nodeNum; i++) {
             this.points.push({
                 x: Math.random(),
                 y: Math.random()
@@ -81,30 +81,56 @@ class Individual {
     }
 }
 
-// Population class
 class Population {
+    /**
+     * Populationクラスのコンストラクタ
+     * @param {Points} points - 座標の集合
+     * @param {number} size - Populationのサイズ（個体数）
+     */
     constructor(points, size) {
+        this.points = points;
         this.individuals = [];
         for (let i = 0; i < size; i++) {
             this.individuals.push(new Individual(points));
         }
     }
 
+    /**
+     * 指定したインデックスの個体を取得する
+     * @param {number} index - 取得したい個体のインデックス
+     * @returns {Individual} - 指定したインデックスの個体
+     */
     getIndividual(index) {
         return this.individuals[index];
     }
 
+    /**
+     * 個体をPopulationに追加する
+     * @param {Individual} individual - 追加する個体
+     */
     pushIndividual(individual) {
         this.individuals.push(individual);
     }
 
+    /**
+     * Populationのサイズ（個体数を取得する）
+     * @returns {number} - Populationのサイズ（個体数）
+     */
     getSize() {
         return this.individuals.length;
+    }
+
+    /**
+     * 別のPopulationインスタンスの個体をこのPopulationに追加する
+     * @param {Population} otherPopulation - 他のPopulationインスタンス
+     */
+    add(otherPopulation) {
+        this.individuals = this.individuals.concat(otherPopulation.individuals);
     }
 }
 
 class FitnessLog {
-    constructor(maxDataPoints=200) {
+    constructor(maxDataPoints = 200) {
         this.log = [];
         this.generation = 0;
         this.generationInterval = 1; // the interval of generations to record data
@@ -113,7 +139,7 @@ class FitnessLog {
 
     pushLog(fitness) {
         if (this.generation % this.generationInterval === 0) {
-            this.log.push({x: this.generation, y: fitness});
+            this.log.push({ x: this.generation, y: fitness });
             // if the data points exceeds the maximum limit
             if (this.log.length > this.maxDataPoints) {
                 // console.log("before length:", this.log.length);
@@ -133,11 +159,12 @@ class FitnessLog {
 
 // Genetic Algorithm class
 class GeneticAlgorithm {
-    constructor(points, popSize, tournamentSize, mutationRate) {
+    constructor(points, popSize, tournamentSize, mutationRate, elitism) {
         this.points = points;
         this.popSize = popSize;
         this.tournamentSize = tournamentSize;
         this.mutationRate = mutationRate;
+        this.elitism = elitism;
         this.generation = 0;
         this.distanceMatrix = new DistanceMatrix(points);
         this.population = new Population(points, popSize);
@@ -204,9 +231,9 @@ class GeneticAlgorithm {
         const [startPos, endPos] = randomSelect(posCandidates, 2).sort();
         // console.log("parent1:", parent1.getRoute());
         // console.log("parent2:", parent2.getRoute());
-        
+
         // console.log(startPos, endPos);
-        
+
         const switchTable1 = {};
         const switchTable2 = {};
 
@@ -264,6 +291,10 @@ class GeneticAlgorithm {
     // Create a new generation
     createNewGeneration() {
         let newPopulation = new Population(this.points, 0);
+        // エリート保存
+        if (this.elitism) {
+            newPopulation.pushIndividual(this.getFittestInPopulation());
+        }
         while (newPopulation.getSize() < this.popSize) {
             let parent1 = this.select();
             let parent2 = this.select();
@@ -294,6 +325,82 @@ class GeneticAlgorithm {
             this.createNewGeneration();
         }
     }
+
+    // 突然変異率を設定
+    setMutationRate(mutationRate) {
+        this.mutationRate = mutationRate;
+        // console.log(this.mutationRate);
+    }
+
+    // トーナメントサイズ設定
+    setTournamentSize(tournamentSize) {
+        this.tournamentSize = tournamentSize;
+        // console.log(this.tournamentSize);
+    }
+
+    // エリート保存設定
+    setElitism(elitism) {
+        this.elitism = elitism;
+    }
+
+    /**
+     * Resize the population to the target size.
+     * If the target size is less than the current population size, the method reduces the population size using the tournament selection policy.
+     * If the target size is greater, the method adds random individuals to the population until it reaches the target size.
+     * 
+     * @param {number} targetSize - The target population size.
+     */
+    resizePopulation(targetSize) {
+        // If the current population size is equal to the target size, do nothing
+        if (this.popSize === targetSize) {
+            // console.log("same");
+            return;
+        }
+        // If the current population size is greater than the target size, reduce the population according to the selection policy
+        if (this.popSize > targetSize) {
+            // console.log("less");
+            this.reducePopulation(targetSize);
+        }
+        // If the current population size is less than the target size, add random individuals to the population
+        else {
+            // console.log("greater");
+            this.increasePopulation(targetSize);
+        }
+
+        // Update the population size
+        this.popSize = targetSize;
+    }
+
+    /**
+     * Reduces the population size to the target size using the tournament selection policy.
+     * If elitism is enabled, the fittest individual is preserved.
+     * 
+     * @param {number} targetSize - The target population size.
+     */
+    reducePopulation(targetSize) {
+        let newPopulation = new Population(this.points, 0);
+
+        if (this.elitism) {
+            newPopulation.pushIndividual(this.getFittestInPopulation());
+        }
+
+        while (newPopulation.getSize() < targetSize) {
+            newPopulation.pushIndividual(this.select());
+        }
+
+        this.population = newPopulation;
+    }
+
+    /**
+     * Increases the population size to the target size by adding random individuals.
+     * 
+     * @param {number} targetSize - The target population size.
+     */
+    increasePopulation(targetSize) {
+        const additionalPopulationSize = targetSize - this.popSize;
+        const newPopulation = new Population(this.points, additionalPopulationSize);
+        this.population.add(newPopulation);
+    }
 }
 
 class GeneticAlgorithmOX extends GeneticAlgorithm {
@@ -308,13 +415,13 @@ class GeneticAlgorithmOX extends GeneticAlgorithm {
 
         const segment1 = parent1.getRoute().slice(startPos, endPos);
         const segment2 = parent2.getRoute().slice(startPos, endPos);
-        
+
         const shiftedParent1Route = parent1.getRoute().slice(endPos).concat(parent1.getRoute().slice(0, endPos));
         const shiftedParent2Route = parent2.getRoute().slice(endPos).concat(parent2.getRoute().slice(0, endPos));
 
         const rest1 = shiftedParent2Route.filter((v) => !segment1.includes(v));
         const rest2 = shiftedParent1Route.filter((v) => !segment2.includes(v));
-        
+
         // console.log("segment1:", segment1);
         // console.log("segment2:", segment2);
         // console.log("shiftedParent1Route:", shiftedParent1Route);
@@ -355,6 +462,7 @@ class GeneticAlgorithmOX2Opt extends GeneticAlgorithmOX {
         }
     }
 }
+
 // RouteGraphクラス
 class RouteGraph {
     // コンストラクタ
@@ -364,7 +472,7 @@ class RouteGraph {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext("2d");
         this.points = points;
-        
+
         // チャートデータの初期化
         this.data = {
             datasets: [{
@@ -399,6 +507,11 @@ class RouteGraph {
         });
     }
 
+    setPoints(points) {
+        this.points = points;
+        this.data.datasets[0].data = this.points.points;
+    }
+
     // チャートの更新
     // individual: 経路情報
     update(individual) {
@@ -411,7 +524,7 @@ class RouteGraph {
 }
 
 class FitnessGraph {
-    constructor(log, canvasId) {
+    constructor(canvasId, log) {
         this.log = log;
         this.ctx = document.getElementById(canvasId).getContext("2d");
 
@@ -449,6 +562,10 @@ class FitnessGraph {
         });
     }
 
+    setLog(log) {
+        this.log = log;
+    }
+
     update() {
         const logData = this.log.getLog();
         this.chart.data.labels = logData.map(e => e.x);
@@ -459,44 +576,106 @@ class FitnessGraph {
 
 class EvolutionController {
 
-    constructor(pointNum, size, mutationRate, fitnessGraphId, routeGraphId, startButtonId, stopButtonId) {
-        this.points = new Points(pointNum);
-        this.ga = new GeneticAlgorithmOX2Opt(this.points, size, 3, mutationRate);
-        // const p1 = new Individual(this.points, [1, 2, 3, 4, 5, 6, 7, 8, 9].map(e => e - 1));
-        // const p2 = new Individual(this.points, [4, 5, 2, 1, 8, 7, 6, 9, 3].map(e => e - 1));
-        // this.ga.crossover(p1, p2);
-        this.fitnessGraph = new FitnessGraph(this.ga.getFitnessLog(), fitnessGraphId);
-        this.routeGraph = new RouteGraph(routeGraphId, this.points);
-        this.intervalID = null;
-        this.running = false;
+    constructor() {
+        // Dom elements assignment
+        this.assignDomElements();
 
-        this.startButton = document.getElementById(startButtonId);
-        this.stopButton = document.getElementById(stopButtonId);
+        // Instance variables assgnment
+        this.assignInstanceVariables();
 
+        // Initial Graph Update
+        this.updateGraphs();
+
+        // Initial state setup
         this.init();
     }
 
-    init() {
-        this.fitnessGraph.update();
+    assignDomElements() {
+        this.outputGeneration = document.getElementById("generation");
+        this.inputNodeNum = document.getElementById("node-num");
+        this.inputPopSize = document.getElementById("pop-size");
+        this.inputMutationRate = document.getElementById("mutation-rate");
+        this.inputTournamentSize = document.getElementById("tournament-size");
+        this.inputElitism = document.getElementById("elitism");
+        this.startButton = document.getElementById("start-button");
+        this.stopButton = document.getElementById("stop-button");
+    }
+
+    assignInstanceVariables() {
+        this.points = new Points(this.inputNodeNum.value);
+        this.ga = new GeneticAlgorithmOX2Opt(
+            this.points, this.inputPopSize.value, this.inputTournamentSize.value, this.inputMutationRate.value, this.inputElitism.checked);
+        this.routeGraph = new RouteGraph("path", this.points);
+        this.fitnessGraph = new FitnessGraph("graph", this.ga.getFitnessLog());
+
+        // const p1 = new Individual(this.points, [1, 2, 3, 4, 5, 6, 7, 8, 9].map(e => e - 1));
+        // const p2 = new Individual(this.points, [4, 5, 2, 1, 8, 7, 6, 9, 3].map(e => e - 1));
+        // this.ga.crossover(p1, p2);
+        this.intervalID = null;
+        this.running = false;
+    }
+
+    updateGraphs() {
         this.routeGraph.update(this.ga.getFittestInPopulation());
+        this.fitnessGraph.update();
+    }
 
-        // Add event listener to the start button
+    init() {
+        this.initButtons();
+        this.initInputs();
+        this.outputGeneration.value = this.ga.generation;
+    }
+
+    initButtons() {
         this.startButton.addEventListener("click", () => this.start());
-
-        // Add event listener to the stop button
         this.stopButton.addEventListener("click", () => this.stop());
+        this.startButton.disabled = false;
+        this.stopButton.disabled = true;
+    }
+
+    initInputs() {
+        this.inputPopSize.addEventListener("change", () => {
+            this.ga.resizePopulation(clampValue(this.inputPopSize));
+        });
+        this.inputMutationRate.addEventListener("change", () => {
+            this.ga.setMutationRate(clampValue(this.inputMutationRate));
+        });
+        this.inputTournamentSize.addEventListener("change", () => {
+            this.ga.setTournamentSize(clampValue(this.inputTournamentSize));
+        });
+        this.inputNodeNum.addEventListener("change", () => {
+            this.resetEnvironment();
+        });
+        this.inputElitism.addEventListener("change", () => {
+            this.ga.setElitism(this.inputElitism.checked);
+        });
+    }
+
+    resetEnvironment() {
+        this.points = new Points(clampValue(this.inputNodeNum));
+        this.ga = new GeneticAlgorithmOX2Opt(
+            this.points, this.inputPopSize.value, this.inputTournamentSize.value, this.inputMutationRate.value, this.inputElitism.checked);
+        this.routeGraph.setPoints(this.points);
+        this.fitnessGraph.setLog(this.ga.getFitnessLog());
+        this.updateGraphs();
     }
 
     start() {
         if (this.running) return;
         this.running = true;
+        this.inputNodeNum.disabled = true;
+        this.startButton.disabled = true;
+        this.stopButton.disabled = false;
 
         // Run evolution
-        this.intervalID = setInterval(() => {
+        const runEvolutionLoop = () => {
+            if (!this.running) return;
+            requestAnimationFrame(runEvolutionLoop);
             this.ga.evolute(20);
-            this.fitnessGraph.update();
-            this.routeGraph.update(this.ga.getFittestInPopulation());
-        }, 0);
+            this.updateGraphs();
+            this.outputGeneration.value = this.ga.generation;
+        };
+        runEvolutionLoop();
     }
 
     stop() {
@@ -504,8 +683,19 @@ class EvolutionController {
         this.running = false;
 
         // Stop evolution
-        clearInterval(this.intervalID);
+        this.inputNodeNum.disabled = false;
+        this.startButton.disabled = false;
+        this.stopButton.disabled = true;
     }
+}
+
+/**
+ * 入力された値が最小値と最大値の範囲内にあるかどうかを確認し、範囲外の場合は最小値または最大値に置き換える。
+ * @param {HTMLInputElement} numElement - 数値入力欄
+ * @returns {number} - 範囲内にある場合は入力された値、範囲外の場合は最小値または最大値
+ */
+function clampValue(numElement) {
+    return Math.min(Math.max(numElement.value, numElement.min), numElement.max);
 }
 
 // Function to calculate distance between two points
@@ -548,11 +738,26 @@ function applyPermutation(array, permutation) {
 }
 
 function main() {
-    let pointNum = 500;
-    let size = 100;
-    let mutationRate = 0.25;
+    new EvolutionController();
 
-    new EvolutionController(pointNum, size, mutationRate, "graph", "canvas", "start-button", "stop-button");
+    const showGAParameterInputsCheckbox = document.getElementById("show-ga-parameter-inputs");
+    const GAParameterInputs = document.getElementById("ga-parameter-inputs");
+    showGAParameterInputsCheckbox.addEventListener("change", () => {
+        if (showGAParameterInputsCheckbox.checked) {
+            GAParameterInputs.style.display = "block";
+        } else {
+            GAParameterInputs.style.display = "none";
+        }
+    });
+    const showEnvironmentSettingsCheckbox = document.getElementById("show-environment-settings");
+    const environmentSettings = document.getElementById("environment-settings");
+    showEnvironmentSettingsCheckbox.addEventListener("change", () => {
+        if (showEnvironmentSettingsCheckbox.checked) {
+            environmentSettings.style.display = "block";
+        } else {
+            environmentSettings.style.display = "none";
+        }
+    });
 }
 
 main();

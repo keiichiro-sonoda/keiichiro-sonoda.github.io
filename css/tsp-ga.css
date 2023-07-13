@@ -1,0 +1,11 @@
+#canvas {
+    border: 1px solid black;
+}
+
+#ga-parameter-inputs {
+    display: none;
+}
+
+#environment-settings {
+    display: none;
+}
