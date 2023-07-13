@@ -627,9 +627,9 @@ class EvolutionController {
     }
 
     assignInstanceVariables() {
-        this.points = new Points(this.inputNodeNum.value);
+        this.points = new Points(clampValue(this.inputNodeNum));
         this.ga = new GeneticAlgorithmOX2Opt(
-            this.points, this.inputPopSize.value, this.inputTournamentSize.value, this.inputMutationRate.value, this.inputElitism.checked);
+            this.points, clampValue(this.inputPopSize), clampValue(this.inputTournamentSize), clampValue(this.inputMutationRate), this.inputElitism.checked);
         this.routeGraph = new RouteGraph("path", this.points);
         this.fitnessGraph = new FitnessGraph("graph", this.ga.getFitnessLog());
 
@@ -663,12 +663,7 @@ class EvolutionController {
             this.inputNodeNum.disabled = this.inputConcentricCircles.checked;
             this.inputRadiusRatio.disabled = !this.inputConcentricCircles.checked;
             if (this.inputConcentricCircles.checked) {
-                const nodeNum = 48;
-                this.inputNodeNum.value = 48;
-                this.points = new Points(0);
-                this.points.setConcentricCircleLocations(nodeNum, clampValue(this.inputRadiusRatio));
-                console.log(this.points.locations);
-                this.resetEnvironment();
+                this.resetEnvironment("concentric-circles");
             }
         });
         this.inputNodeNum.addEventListener("change", () => {
@@ -676,7 +671,7 @@ class EvolutionController {
             this.resetEnvironment();
         });
         this.inputRadiusRatio.addEventListener("change", () => {
-            this.resetEnvironment();
+            this.resetEnvironment("concentric-circles");
         });
         this.inputPopSize.addEventListener("change", () => {
             this.ga.resizePopulation(clampValue(this.inputPopSize));
@@ -692,9 +687,16 @@ class EvolutionController {
         });
     }
 
-    resetEnvironment() {
+    resetEnvironment(mode) {
+        if (mode === "concentric-circles") {
+            this.inputNodeNum.value = 48;
+            this.points = new Points(0);
+            this.points.setConcentricCircleLocations(this.inputNodeNum.value, clampValue(this.inputRadiusRatio));
+        } else {
+            this.points = new Points(clampValue(this.inputNodeNum));
+        }
         this.ga = new GeneticAlgorithmOX2Opt(
-            this.points, this.inputPopSize.value, this.inputTournamentSize.value, this.inputMutationRate.value, this.inputElitism.checked);
+            this.points, clampValue(this.inputPopSize), clampValue(this.inputTournamentSize), clampValue(this.inputMutationRate), this.inputElitism.checked);
         this.routeGraph.setPoints(this.points);
         this.fitnessGraph.setLog(this.ga.getFitnessLog());
         this.updateGraphs();
