@@ -1,16 +1,16 @@
 class Points {
-    constructor(nodeNum) {
-        this.points = [];
-        // 座標をランダムに生成
-        for (let i = 0; i < nodeNum; i++) {
-            this.points.push({
-                x: Math.random(),
-                y: Math.random()
-            });
-            // this.points.push({
-            //     x: Math.cos(2 * i * Math.PI / num) * canvas.width / 2 + canvas.width / 2,
-            //     y: Math.sin(2 * i * Math.PI / num) * canvas.height / 2 + canvas.height / 2,
-            // });
+    constructor(nodeNum, points) {
+        if (points) {
+            this.points = points;
+        } else {
+            this.points = [];
+            // 座標をランダムに生成
+            for (let i = 0; i < nodeNum; i++) {
+                this.points.push({
+                    x: Math.random(),
+                    y: Math.random()
+                });
+            }
         }
     }
 
@@ -592,6 +592,8 @@ class EvolutionController {
 
     assignDomElements() {
         this.outputGeneration = document.getElementById("generation");
+        this.inputConcentricCircles = document.getElementById("concentric-circles");
+        this.inputRadiusRatio = document.getElementById("radius-ratio");
         this.inputNodeNum = document.getElementById("node-num");
         this.inputPopSize = document.getElementById("pop-size");
         this.inputMutationRate = document.getElementById("mutation-rate");
@@ -634,6 +636,20 @@ class EvolutionController {
     }
 
     initInputs() {
+        this.inputConcentricCircles.addEventListener("change", () => {
+            this.inputNodeNum.disabled = this.inputConcentricCircles.checked;
+            this.inputRadiusRatio.disabled = !this.inputConcentricCircles.checked;
+            if (this.inputConcentricCircles.checked) {;
+                this.inputNodeNum.value = 24;
+                this.resetEnvironment();
+            }
+        });
+        this.inputNodeNum.addEventListener("change", () => {
+            this.resetEnvironment();
+        });
+        this.inputRadiusRatio.addEventListener("change", () => {
+            this.resetEnvironment();
+        });
         this.inputPopSize.addEventListener("change", () => {
             this.ga.resizePopulation(clampValue(this.inputPopSize));
         });
@@ -642,9 +658,6 @@ class EvolutionController {
         });
         this.inputTournamentSize.addEventListener("change", () => {
             this.ga.setTournamentSize(clampValue(this.inputTournamentSize));
-        });
-        this.inputNodeNum.addEventListener("change", () => {
-            this.resetEnvironment();
         });
         this.inputElitism.addEventListener("change", () => {
             this.ga.setElitism(this.inputElitism.checked);
@@ -663,6 +676,7 @@ class EvolutionController {
     start() {
         if (this.running) return;
         this.running = true;
+        this.inputConcentricCircles.disabled = true;
         this.inputNodeNum.disabled = true;
         this.startButton.disabled = true;
         this.stopButton.disabled = false;
@@ -683,6 +697,7 @@ class EvolutionController {
         this.running = false;
 
         // Stop evolution
+        this.inputConcentricCircles.disabled = false;
         this.inputNodeNum.disabled = false;
         this.startButton.disabled = false;
         this.stopButton.disabled = true;
