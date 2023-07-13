@@ -660,8 +660,8 @@ class EvolutionController {
 
     initInputs() {
         this.inputConcentricCircles.addEventListener("change", () => {
-            this.inputNodeNum.disabled = this.inputConcentricCircles.checked;
-            this.inputRadiusRatio.disabled = !this.inputConcentricCircles.checked;
+            this.inputNodeNum.disabled = this.inputConcentricCircles.checked || this.running;
+            this.inputRadiusRatio.disabled = !this.inputConcentricCircles.checked || this.running;
             if (this.inputConcentricCircles.checked) {
                 this.resetEnvironment("concentric-circles");
             }
@@ -707,6 +707,7 @@ class EvolutionController {
         this.running = true;
         this.inputConcentricCircles.disabled = true;
         this.inputNodeNum.disabled = true;
+        this.inputRadiusRatio.disabled = true;
         this.startButton.disabled = true;
         this.stopButton.disabled = false;
 
@@ -727,7 +728,8 @@ class EvolutionController {
 
         // Stop evolution
         this.inputConcentricCircles.disabled = false;
-        this.inputNodeNum.disabled = false;
+        this.inputNodeNum.disabled = this.inputConcentricCircles.checked;
+        this.inputRadiusRatio.disabled = !this.inputConcentricCircles.checked;
         this.startButton.disabled = false;
         this.stopButton.disabled = true;
     }
