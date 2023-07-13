@@ -1,25 +1,48 @@
 class Points {
-    constructor(nodeNum, points) {
-        if (points) {
-            this.points = points;
+    constructor(nodeNum, locations) {
+        if (locations) {
+            this.locations = locations;
         } else {
-            this.points = [];
-            // 座標をランダムに生成
-            for (let i = 0; i < nodeNum; i++) {
-                this.points.push({
-                    x: Math.random(),
-                    y: Math.random()
-                });
-            }
+            this.locations = this.generateRandomLocations(nodeNum);
         }
     }
 
-    getPoint(index) {
-        return this.points[index];
+    generateRandomLocations(nodeNum) {
+        const locations = [];
+        // Generate random coordinates
+        for (let i = 0; i < nodeNum; i++) {
+            locations.push({
+                x: Math.random(),
+                y: Math.random()
+            });
+        }
+        return locations;
+    }
+
+    setConcentricCircleLocations(nodeNum, radiusRatio) {
+        if (nodeNum % 2 !== 0) {
+            throw "Invalid value!!";
+        }
+        const nodeNumHalf = nodeNum / 2;
+        this.locations = [];
+        for (let i = 0; i < nodeNumHalf; i++) {
+            this.locations.push({
+                x: Math.cos(i / nodeNumHalf * 2 * Math.PI) + 0.5,
+                y: Math.sin(i / nodeNumHalf * 2 * Math.PI) + 0.5,
+            })
+            this.locations.push({
+                x: Math.cos(i / nodeNumHalf * 2 * Math.PI) * radiusRatio + 0.5,
+                y: Math.sin(i / nodeNumHalf * 2 * Math.PI) * radiusRatio + 0.5,
+            })
+        }
+    }
+
+    getLocation(index) {
+        return this.locations[index];
     }
 
     getLength() {
-        return this.points.length;
+        return this.locations.length;
     }
 }
 
@@ -29,7 +52,7 @@ class DistanceMatrix {
         for (let i = 0; i < points.getLength(); i++) {
             let row = [];
             for (let j = 0; j < points.getLength(); j++) {
-                row.push(calculateDistance(points.getPoint(i), points.getPoint(j)));
+                row.push(calculateDistance(points.getLocation(i), points.getLocation(j)));
             }
             this.matrix.push(row);
         }
@@ -477,7 +500,7 @@ class RouteGraph {
         this.data = {
             datasets: [{
                 label: "Points", // ポイントのラベル
-                data: this.points.points, // ポイントの座標
+                data: this.points.locations, // ポイントの座標
                 pointRadius: 2,
                 borderColor: "rgba(255, 200, 0, 1)",
                 backgroundColor: "rgba(255, 200, 0, 0.2)",
@@ -509,14 +532,14 @@ class RouteGraph {
 
     setPoints(points) {
         this.points = points;
-        this.data.datasets[0].data = this.points.points;
+        this.data.datasets[0].data = this.points.locations;
     }
 
     // チャートの更新
     // individual: 経路情報
     update(individual) {
         // 経路データの更新
-        this.data.datasets[1].data = applyPermutation(this.points.points, individual.getRoute());
+        this.data.datasets[1].data = applyPermutation(this.points.locations, individual.getRoute());
         this.data.datasets[1].data.push(this.data.datasets[1].data[0]);
         // チャートの更新
         this.chart.update();
@@ -639,12 +662,17 @@ class EvolutionController {
         this.inputConcentricCircles.addEventListener("change", () => {
             this.inputNodeNum.disabled = this.inputConcentricCircles.checked;
             this.inputRadiusRatio.disabled = !this.inputConcentricCircles.checked;
-            if (this.inputConcentricCircles.checked) {;
-                this.inputNodeNum.value = 24;
+            if (this.inputConcentricCircles.checked) {
+                const nodeNum = 48;
+                this.inputNodeNum.value = 48;
+                this.points = new Points(0);
+                this.points.setConcentricCircleLocations(nodeNum, clampValue(this.inputRadiusRatio));
+                console.log(this.points.locations);
                 this.resetEnvironment();
             }
         });
         this.inputNodeNum.addEventListener("change", () => {
+            this.points = new Points(clampValue(this.inputNodeNum));
             this.resetEnvironment();
         });
         this.inputRadiusRatio.addEventListener("change", () => {
@@ -665,7 +693,6 @@ class EvolutionController {
     }
 
     resetEnvironment() {
-        this.points = new Points(clampValue(this.inputNodeNum));
         this.ga = new GeneticAlgorithmOX2Opt(
             this.points, this.inputPopSize.value, this.inputTournamentSize.value, this.inputMutationRate.value, this.inputElitism.checked);
         this.routeGraph.setPoints(this.points);
