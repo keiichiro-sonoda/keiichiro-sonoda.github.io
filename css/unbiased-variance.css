@@ -1,0 +1,35 @@
+.reference-links {
+    border-top: 2px solid #000;
+    padding-top: 10px;
+}
+
+.reference-links a{
+    display: block;
+    margin-bottom: 10px;
+}
+
+.equation-wrapper {
+    line-height: 1;
+}
+
+.mjx-wrapper {
+    background-color: #e0f7fa;
+    border: 1px solid rgba(0, 0, 255, 0.2);
+    border-radius: 5px;
+    display: block;
+    width: min-content;
+    min-width: 100%;
+    box-sizing: border-box;
+    margin: 10px 0px;
+    padding: 0px 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.mjx-inline-wrapper {
+    background-color: rgba(0, 0, 0, 0.02);
+    display: inline-block;
+    padding: 10px 5px 5px;
+    margin: 0px 5px;
+    border-radius: 3px;
+    box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.1);
+}
