@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width" initial-scale="1.0">
-    <title>MathJax Example</title>
+    <title>不偏分散はなぜn-1で割るのか</title>
     <script type="text/x-mathjax-config">
         MathJax.Hub.Config({
             TeX: { equationNumbers: { autoNumber: "AMS" } },
@@ -15,7 +15,7 @@
 </head>
 
 <body>
-    <h1>不偏性について</h1>
+    <h1>不偏分散の導出</h1>
     <div class="equation-wrapper">
         $x_i$の標本平均$\bar{x}$は以下のように定義されます：
         \begin{equation}
@@ -27,7 +27,7 @@
         \hat{s}^2=\frac{1}{n}\Sigma_{i=1}^{n}(x_i-\bar{x})^2
         \label{eq1}
         \end{equation}
-        ここで、$(x_i-\bar{x})$の部分は次のように展開できます：
+        ここで、$(x_i-\bar{x})$の部分は次のように展開できます。$x_i$と$\bar{x}$をそれぞれ$\mu$で引くという巧妙な手法を使います：
         \begin{align}
         \Sigma_{i=1}^{n}(x_i-\bar{x})^2
         & =\Sigma_{i=1}^{n}\left((x_i-\mu)-(\bar{x}-\mu)\right)^2 \nonumber\\
