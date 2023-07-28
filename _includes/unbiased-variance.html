@@ -1,0 +1,85 @@
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width" initial-scale="1.0">
+    <title>MathJax Example</title>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            TeX: { equationNumbers: { autoNumber: "AMS" } },
+            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link href="../styles/mathjax.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <h1>不偏性について</h1>
+    <div class="equation-wrapper">
+        $x_i$の標本平均$\bar{x}$は以下のように定義されます：
+        \begin{equation}
+        \bar{x}=\frac{1}{n}\Sigma_{i=1}^{n}{x_i}
+        \label{eq0}
+        \end{equation}
+        そして、標本分散$\hat{s}^2$は次の式から求めることができます：
+        \begin{equation}
+        \hat{s}^2=\frac{1}{n}\Sigma_{i=1}^{n}(x_i-\bar{x})^2
+        \label{eq1}
+        \end{equation}
+        ここで、$(x_i-\bar{x})$の部分は次のように展開できます：
+        \begin{align}
+        \Sigma_{i=1}^{n}(x_i-\bar{x})^2
+        & =\Sigma_{i=1}^{n}\left((x_i-\mu)-(\bar{x}-\mu)\right)^2 \nonumber\\
+        & =\Sigma_{i=1}^{n}\left((x_i-\mu)^2-2(x_i-\mu)(\bar{x}-\mu)+(\bar{x}-\mu)^2\right) \nonumber\\
+        & =\Sigma_{i=1}^{n}(x_i-\mu)^2-2(\bar{x}-\mu)\Sigma_{i=1}^{n}(x_i-\mu)+n(\bar{x}-\mu)^2 \label{eq2}
+        \end{align}
+        式\eqref{eq0}を変形すると$\Sigma_{i=1}^{n}{x_i}=n\bar{x}$が得られるため、式\eqref{eq2}中の$\Sigma_{i=1}^{n}(x_i-\mu)$部分は次のように変形できます：
+        \[
+        \Sigma_{i=1}^{n}(x_i-\mu)=\Sigma_{i=1}^{n}{x_i}-\Sigma_{i=1}^{n}\mu=n\bar{x}-n\mu
+        \]
+        したがって、式\eqref{eq2}は次のようになります：
+        \begin{align}
+        \Sigma_{i=1}^{n}(x_i-\bar{x})^2
+        & =\Sigma_{i=1}^{n}(x_i-\mu)^2-2n(\bar{x}-\mu)^2+n(\bar{x}-\mu)^2 \nonumber\\
+        & =\Sigma_{i=1}^{n}(x_i-\mu)^2-n(\bar{x}-\mu)^2 \label{eq3}
+        \end{align}
+        そして、標本分散の期待値$E\left[\hat{s}^2\right]$は次のように展開できます：
+        \begin{align}
+        E\left[\hat{s}^2\right]
+        & =\frac{1}{n}E\left[\Sigma_{i=1}^{n}(x_i-\bar{x})^2\right] \nonumber\\
+        & =\frac{1}{n}\left(E\left[\Sigma_{i=1}^{n}(x_i-\mu)^2\right]-nE\left[(\bar{x}-\mu)^2\right]\right) \nonumber\\
+        & =\frac{1}{n}\Sigma_{i=1}^{n}E\left[(x_i-\mu)^2\right]-E\left[(\bar{x}-\mu)^2\right]
+        \label{eq4}
+        \end{align}
+        母分散$\sigma^2$の定義から、$E\left[(x_i-\mu)^2\right]=\sigma^2$です。したがって、式\eqref{eq4}の第一項は$\sigma^2$となります。また、式\eqref{eq4}の第二項は標本平均の分散であり、各$x_i$は独立なので分散が和に分解できます：
+        \begin{align*}
+        E\left[(\bar{x}-\mu)^2\right]
+        &=V\left[\frac{1}{n}\Sigma_{i=1}^{n}{x_i}\right] \\
+        &=\frac{1}{n^2}V\left[\Sigma_{i=1}^{n}{x_i}\right] \\
+        &=\frac{1}{n^2}\cdot n\sigma^2 \\
+        &=\frac{\sigma^2}{n}
+        \end{align*}
+        したがって、標本分散の期待値は次のようになります：
+        \begin{equation}
+        E\left[\hat{s}^2\right]=\sigma^2-\frac{\sigma^2}{n}
+        \label{eq5}
+        \end{equation}
+        これらの結果から、$n$が有限の場合、標本分散は母分散を過小評価します。そのため、不偏分散$s^2$はサンプルサイズ$n$ではなく、$n-1$で割ることで調整されます：
+        \begin{equation}
+        s^2=\frac{1}{n-1}\Sigma_{i=1}^{n}(x_i-\bar{x})^2
+        \end{equation}
+        これにより、不偏分散の期待値が母分散に一致します：
+        \begin{equation}
+        E\left[s^2\right]=E\left[\frac{n}{n-1}\hat{s}^2\right]=\sigma^2
+        \end{equation}
+    </div>
+    <div class="reference-links">
+        <h2>参考ページ</h2>
+        <a href="https://bellcurve.jp/statistics/course/14987.html">標本分散の一致性と不偏性 | 統計学の時間 | 統計WEB</a><br>
+        <a href="https://manabitimes.jp/math/1035">不偏標本分散の意味とn-1で割ることの証明 | 高校数学の美しい物語</a>
+    </div>
+    <script src="../scripts/mathjax.js"></script>
+</body>
+
+</html>
