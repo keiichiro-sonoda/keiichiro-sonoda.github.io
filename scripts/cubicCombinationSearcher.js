@@ -26,7 +26,7 @@ async function _findSolutions() {
                 const y = (j % 2 === 0) ? j / 2 : -(j + 1) / 2;
 
                 const k = maxSum - i - j;
-                await new Promise(resolve => setTimeout(resolve, 1000)); // To avoid blocking the UI
+                await new Promise(resolve => setTimeout(resolve, 0)); // To avoid blocking the UI
 
                 const z = (k % 2 === 0) ? k / 2 : -(k + 1) / 2;
                 const sumCubes = x ** 3 + y ** 3 + z ** 3;
