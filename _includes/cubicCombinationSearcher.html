@@ -8,11 +8,23 @@
 
 <body>
     <h3>
-        3つの平方数の和で、1から100までの数を表すことを試みます。
-        ブルートフォース探索で、すべての順列を試すので効率が悪いです。
+        3つの平方数の和で、1から100までの数を表すことができるものをすべて求めます。
+        ブルートフォース探索で、すべての組み合わせを試します。
     </h3>
     <button onclick="findSolutions()">Find solutions</button>
-    <ul id="output"></ul>
+    <table id="output">
+        <thead>
+            <tr>
+                <th>Formula</th>
+                <th>Time (s)</th>
+                <th>Combinations tried</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be appended here -->
+        </tbody>
+    </table>
+    <ol id="output"></ol>
     <script src="/scripts/cubicCombinationSearcher.js"></script>
 </body>
 </html>
