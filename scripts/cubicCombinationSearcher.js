@@ -1,3 +1,5 @@
+let currentOrder = 0;
+
 async function findSolutions() {
     let maxSum = 0;
     let triedCombinations = 0;
@@ -34,17 +36,17 @@ async function findSolutions() {
 
 function addToOutput(target, x, y, z, elapsedTime, triedCombinations) {
     const output = document.getElementById("output").querySelector("tbody");
-    // const listItem = document.createElement("li");
-    // listItem.innerText = `${target} = ${x}^3 + ${y}^3 + ${z}^3 | Time taken: ${elapsedTime.toFixed(2)}s | Combination tried: ${triedCombinations}`;
-
     const row = output.insertRow();
 
-    const forumlaCell = row.insertCell(0);
+    const orderCell = row.insertCell(0);
+    orderCell.innerText = ++currentOrder;
+
+    const forumlaCell = row.insertCell(1);
     forumlaCell.innerText = `${target} = ${x}^3 + ${y}^3 + ${z}^3`;
 
-    const timeCell = row.insertCell(1);
+    const timeCell = row.insertCell(2);
     timeCell.innerText = elapsedTime.toFixed(2);
 
-    const combinationCell = row.insertCell(2);
+    const combinationCell = row.insertCell(3);
     combinationCell.innerText = triedCombinations;
 }

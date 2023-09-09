@@ -3,18 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3つの平方数の和</title>
+    <title>3つの数の立方和による表現</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+
+        h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px, 15px;
+            height: 40px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+        }
+
+        th, td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: #000;
+        }
+    </style>
 </head>
 
 <body>
     <h3>
-        3つの平方数の和で、1から100までの数を表すことができるものをすべて求めます。
-        ブルートフォース探索で、すべての組み合わせを試します。
+        1から100までの数を、3つの数の立方和として表現します。
+        ブルートフォース探索なので、時間がかかります。
     </h3>
     <button onclick="findSolutions()">Find solutions</button>
     <table id="output">
         <thead>
             <tr>
+                <th>Order</th>
                 <th>Formula</th>
                 <th>Time (s)</th>
                 <th>Combinations tried</th>
