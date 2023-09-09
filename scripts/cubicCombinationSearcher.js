@@ -1,6 +1,18 @@
 let currentOrder = 0;
 
-async function findSolutions() {
+function createFindSolutions() {
+    let isRunning = false;
+    return function () {
+        if (isRunning) {
+            console.log("Already running");
+            return;
+        }
+        isRunning = true;
+        _findSolutions().then(() => isRunning = false);
+    }
+}
+
+async function _findSolutions() {
     let maxSum = 0;
     let triedCombinations = 0;
     let startTime = Date.now();
@@ -14,7 +26,7 @@ async function findSolutions() {
                 const y = (j % 2 === 0) ? j / 2 : -(j + 1) / 2;
 
                 const k = maxSum - i - j;
-                await new Promise(resolve => setTimeout(resolve, 0)); // To avoid blocking the UI
+                await new Promise(resolve => setTimeout(resolve, 1000)); // To avoid blocking the UI
 
                 const z = (k % 2 === 0) ? k / 2 : -(k + 1) / 2;
                 const sumCubes = x ** 3 + y ** 3 + z ** 3;
@@ -50,3 +62,5 @@ function addToOutput(target, x, y, z, elapsedTime, triedCombinations) {
     const combinationCell = row.insertCell(3);
     combinationCell.innerText = triedCombinations;
 }
+
+const findSolutions = createFindSolutions();
