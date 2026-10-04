@@ -1,0 +1,5 @@
+#!/bin/sh
+# push の前に、公開すると取り消せないものを検査する（tools/publish_lint.py）。
+# 有効にする: git config core.hooksPath .githooks
+# ⚠️ 検査が失敗・検査できないときは push を止める。--no-verify で飛ばさないこと
+exec python3 "$(git rev-parse --show-toplevel)/tools/publish_lint.py" --hook

@@ -55,3 +55,13 @@ plugins:
 #   - vendor/cache/
 #   - vendor/gems/
 #   - vendor/ruby/
+
+# 公開しないもの（公開前の検査の道具と説明）。Jekyll 3 では既定の一覧を置き換えるので、既定の分も並べる
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - tools
+  - PUBLISHING.md
+  - publish-allow.txt
