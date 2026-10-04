@@ -39,6 +39,7 @@ B を A に混ぜない。止めない指摘を A に積むと、鳴っても押
 - **リンク先を読まなくても分かるか。**内輪の記号・略語が定義なしに出てこないか
 - **リンクが生きているか。**サイト内のリンク（`/explainers/...`）と外部リンクを開く
 - **記事から辿れるか。**新しい図解に、`src/content/posts/` の紹介記事があるか。記事の日付が未来になっていないか
+- **テスト。**`npm test` と `npm run test:e2e` が通るか（CI でも走り、落ちたら公開しない）
 - **ビルドの出力。**`npm run build` のあと `python3 tools/publish_lint.py --dir dist` が通るか（GitHub Actions も同じ検査をする）。
   Astro は `src/pages/` と `public/` からしか出力しないので、`tools/`・`docs/`・`CLAUDE.md` は出ない。`public/` に置いたものは**そのまま全部出る**
 

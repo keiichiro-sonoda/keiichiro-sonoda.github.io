@@ -8,3 +8,7 @@ public/vendor/
 _site/
 .jekyll-cache/
 __pycache__/
+# テストの出力
+coverage/
+test-results/
+playwright-report/

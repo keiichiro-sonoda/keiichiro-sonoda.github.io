@@ -98,3 +98,6 @@
 - 記事の日付は実際の時刻にする。**Astro は未来の日付の記事も出す**（Jekyll と違う）。下書きは `draft: true`（ビルドでは出ない）
 - ローカルで確かめる: `npm run dev` → `http://localhost:4321/explainers/<名前>/`。保存すると画面がすぐ変わる
 - 仕上げに `npm run check`（型）と `npm run build` を通す
+- 模型の計算や操作が込み入ってきたら、計算を `model.ts` などに分けて `npm test`（vitest）の単体テストを付け、
+  操作は `e2e/` に Playwright のテストを足す（見本は巡回セールスマンの実験台、`src/components/tsp/` と `e2e/tsp.spec.ts`）
+- **画面写真は Playwright で撮って、自分の目で見る。**Claude のブラウザのペインは裏に回ると描画が止まり、見た目を確かめられないことがある

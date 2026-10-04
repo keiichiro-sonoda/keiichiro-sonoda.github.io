@@ -15,7 +15,6 @@ const out = join(root, "public", "vendor");
 
 // [出力先の名前, node_modules の中のパッケージ, 写すパス（パッケージの中の相対パス）]
 const VENDOR = [
-  ["chart.js", "chart.js", ["dist/chart.umd.min.js", "LICENSE.md"]],
   // 株価予測のノートブックと不偏分散（MathJax 3）。tex-mml-chtml.js が、必要に応じて input/ や output/ の下を読みに来る
   ["mathjax3", "mathjax3", ["LICENSE", "es5/tex-mml-chtml.js", "es5/input", "es5/output/chtml", "es5/ui", "es5/a11y", "es5/adaptors"]],
 ];

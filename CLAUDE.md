@@ -21,6 +21,8 @@
 |---|---|
 | `src/content/posts/` | 記事（Markdown / MDX）。ファイル名は `YYYY-MM-DD-<名前>.mdx`。URL は Jekyll 時代と同じ `/YYYY/MM/DD/<名前>.html`（`src/lib/posts.ts`） |
 | `src/pages/explainers/<名前>/` | 図解のページ。動く部分は `src/components/<名前>/` の React の部品 |
+| `src/components/tsp/` | 巡回セールスマンの実験台。**作り込んだ部品の見本**: 計算（`engine/`）・Worker で回す役（`runner.ts`）・画面（`.tsx`）を分け、計算と実行役に単体テストを付けている |
+| `e2e/` | Playwright の e2e テスト（サイト全体の煙テストと、実験台の操作） |
 | `src/layouts/`・`src/styles/global.css` | サイト共通の枠と色（ライトとダーク） |
 | `src/components/legacy/`・`src/legacy/`・`public/legacy/` | Jekyll 時代の作品。書き直さずに動かしている（ページ丸ごとの HTML は iframe、ノートブックは本文に差し込む） |
 | `public/` | **そのまま全部公開される**。古い作品の JS・CSS など |
@@ -36,7 +38,15 @@ npm ci            # 初回（node_modules を package-lock.json どおりに入�
 npm run dev       # http://localhost:4321/ 。保存すると画面がすぐ変わる
 npm run check     # 型の検査
 npm run build     # dist/ に出力
+npm test          # 単体テスト（vitest）。npm run test:coverage でカバレッジ（下限を割ると落ちる）
+npm run test:e2e  # ビルドして e2e テスト（Playwright）。初回だけ npx playwright install chromium
 ```
+
+- **重い計算は画面のスレッドで回さない。**Web Worker に移し、画面は届いた結果を描くだけにする（`src/components/tsp/` が見本）
+- **計算は画面から切り離して単体テストを付ける。**乱数はシード付きにすると、結果が決まってテストできる
+- **「固まらない」「速い」のような主張をテストするときは、測り方そのものが働くことも確かめる。**
+  わざと遅くした状態で落ちることを見ないと、何も測れていないまま通る（実際に一度そうなった。`e2e/tsp.spec.ts` の「測り方の確認」）
+- CI（`.github/workflows/deploy.yml`）は 型の検査 → 単体テスト → ビルド → e2e → 成果物の公開前検査 の順に通らないと公開しない
 
 - **外部の CDN から `<script src>` で読まない。**npm で版を固定して入れる（React の部品なら import、
   素の `<script>` なら `tools/vendor.mjs` の表に足して `/vendor/` から読む）。理由は `tools/vendor.mjs` の冒頭

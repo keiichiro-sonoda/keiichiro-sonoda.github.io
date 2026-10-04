@@ -35,7 +35,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: 単体テスト（カバレッジの下限を割ったら落ちる）
+        run: npm run test:coverage
       - run: npm run build
+      - name: e2e テスト（ビルドした成果物を astro preview で配って確かめる）
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
       - name: 成果物の公開前検査
         env:
           DENY_WORDS: ${{ secrets.PUBLISH_DENY_WORDS }}

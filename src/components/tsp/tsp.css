@@ -1,0 +1,314 @@
+/* 巡回セールスマンの実験台。すべて .tsp の中に閉じ込める。
+   経路を描く舞台は、ライトでもダークでも夜の地図のような暗い地にする（光る経路が見やすい） */
+.tsp {
+  --tsp-stage: radial-gradient(120% 120% at 30% 20%, #17304d 0%, #0b1626 55%, #070e19 100%);
+  --tsp-grid: rgba(140, 180, 220, 0.08);
+  --tsp-route: #3ee6c8;
+  --tsp-city: #e8f1ff;
+  --tsp-start: #ffb547;
+  --tsp-radius: 14px;
+  /* グラフはパネル（ライトでは白地）に描くので、舞台とは別の色 */
+  --tsp-line: #0f9f8a;
+  --tsp-mark: #c2410c;
+  /* 左に舞台とグラフ、右に数字と操作。狭い画面では 舞台 → 操作 → グラフ の順に1列 */
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-areas:
+    "stage side"
+    "chart side";
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  margin: 8px 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+@media (max-width: 720px) {
+  .tsp {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "stage" "side" "chart";
+    grid-template-rows: auto;
+  }
+}
+.tsp-stage {
+  grid-area: stage;
+}
+.tsp-side {
+  grid-area: side;
+}
+.tsp-chart-box {
+  grid-area: chart;
+}
+
+/* 舞台 */
+.tsp-stage {
+  position: relative;
+  border-radius: var(--tsp-radius);
+  background: var(--tsp-stage);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 40px rgba(5, 15, 30, 0.35);
+  overflow: hidden;
+}
+.tsp-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}
+.tsp-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 2px 10px 2px 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #cfe3f7;
+  background: rgba(10, 20, 35, 0.6);
+  backdrop-filter: blur(4px);
+}
+.tsp-badge::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: #6b7f95;
+}
+.tsp-badge[data-state="running"]::before {
+  background: var(--tsp-route);
+  box-shadow: 0 0 0 0 var(--tsp-route);
+  animation: tsp-pulse 1.4s ease-out infinite;
+}
+@keyframes tsp-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(62, 230, 200, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(62, 230, 200, 0);
+  }
+}
+
+/* 右側 */
+.tsp-side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.tsp-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.tsp-stat {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.tsp-stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.tsp-stat-value {
+  font-family: var(--f-mono);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 4つのボタンは 2×2 に固定する（幅しだいで 3つ＋1つ になるのを避ける） */
+.tsp-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.tsp button {
+  font: inherit;
+  cursor: pointer;
+}
+.tsp-buttons button {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+}
+.tsp-buttons button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.tsp-buttons .tsp-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #18b39a, #0f8f9e);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(15, 143, 158, 0.35);
+}
+.tsp-buttons button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tsp-error {
+  margin: 0;
+  color: #d9480f;
+}
+
+.tsp-group {
+  margin: 0;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.tsp-group legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+.tsp-note {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* 4つの選択肢は4列（狭い画面では 2×2）。「3つ＋1つ」にしない */
+.tsp-seg {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+@media (max-width: 380px) {
+  .tsp-seg {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.tsp-seg button {
+  padding: 4px 6px;
+  white-space: nowrap;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+.tsp-seg button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--panel);
+}
+.tsp-field {
+  display: grid;
+  grid-template-columns: 11em minmax(0, 1fr) 3.5em;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.tsp-field span {
+  color: var(--muted);
+}
+.tsp-field input[type="range"] {
+  width: 100%;
+  accent-color: #18b39a;
+}
+.tsp-field input[type="number"] {
+  grid-column: span 2;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-mono);
+}
+.tsp-field output {
+  font-family: var(--f-mono);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tsp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.tsp-toggle input {
+  accent-color: #18b39a;
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 420px) {
+  .tsp-field {
+    grid-template-columns: minmax(0, 1fr) 3.5em;
+  }
+  .tsp-field span {
+    grid-column: span 2;
+  }
+}
+
+/* グラフ */
+.tsp-chart-box {
+  padding: 12px 14px 6px;
+  border-radius: var(--tsp-radius);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.tsp-chart-title {
+  font-size: 13px;
+  color: var(--muted);
+}
+.tsp-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tsp-chart-empty {
+  aspect-ratio: 420 / 230;
+}
+.tsp-axis line {
+  stroke: var(--line);
+}
+.tsp-axis text {
+  fill: var(--muted);
+  font-family: var(--f-mono);
+  font-size: 12px;
+}
+.tsp-line {
+  fill: none;
+  stroke: var(--tsp-line);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.tsp-dot {
+  fill: var(--tsp-line);
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+.tsp-optimum line {
+  stroke: var(--tsp-mark);
+  stroke-dasharray: 5 4;
+}
+.tsp-optimum text {
+  fill: var(--tsp-mark);
+  font-size: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tsp {
+    --tsp-line: #3ee6c8;
+    --tsp-mark: #ffb547;
+  }
+}
+:root[data-theme="dark"] .tsp {
+  --tsp-line: #3ee6c8;
+  --tsp-mark: #ffb547;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tsp-badge[data-state="running"]::before {
+    animation: none;
+  }
+}
