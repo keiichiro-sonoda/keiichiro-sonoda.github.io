@@ -1,0 +1,17 @@
+---
+// Jekyll の about.markdown（permalink: /about/）から移した。build.format: "preserve" なので、
+// /about/ を保つには about/index.astro に置く（about.astro だと /about.html になる）
+import Base from "../../layouts/Base.astro";
+---
+
+<Base title="About">
+  <h1>About</h1>
+  <p>暇つぶし用のサイト</p>
+</Base>
+
+<style>
+  h1 {
+    margin: 0 0 16px;
+    font-size: 28px;
+  }
+</style>

@@ -1,0 +1,23 @@
+---
+// GitHub Pages は、見つからないページで /404.html を返す
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="ページが見つかりません">
+  <div class="box">
+    <h1>404</h1>
+    <p>ページが見つかりませんでした。</p>
+    <p><a href="/">トップへ戻る</a></p>
+  </div>
+</Base>
+
+<style>
+  .box {
+    text-align: center;
+  }
+  h1 {
+    margin: 30px 0;
+    font-size: 4em;
+    line-height: 1;
+  }
+</style>

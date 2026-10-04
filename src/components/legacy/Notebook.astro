@@ -1,0 +1,46 @@
+---
+// Jupyter ノートブックを HTML に書き出した断片（src/legacy/notebooks/）を、記事の本文にそのまま差し込む。
+// 断片は自分の書式を持たないので、ここで最低限の見た目（コードの横スクロール、画像の幅）だけ当てる
+interface Props {
+  html: string;
+}
+const { html } = Astro.props;
+---
+
+<div class="notebook" set:html={html} />
+
+<style>
+  .notebook :global(.prompt) {
+    display: none;
+  }
+  .notebook :global(pre) {
+    overflow-x: auto;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .notebook :global(.output_area pre) {
+    background: transparent;
+    border-left: 3px solid var(--line);
+    border-radius: 0;
+  }
+  .notebook :global(img) {
+    max-width: 100%;
+    height: auto;
+    /* 図はノートブックで白地に描かれているので、ダークモードでも白地で見せる */
+    background: #fff;
+  }
+  .notebook :global(table) {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .notebook :global(th),
+  .notebook :global(td) {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+</style>

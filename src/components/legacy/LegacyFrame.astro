@@ -1,0 +1,54 @@
+---
+// ページ丸ごとの古い作品（public/legacy/ に置いたもの）を iframe で埋め込む。
+// 古い作品は body や button に書式を当てていて、記事に直接入れるとサイトの見た目（ダークモード）を壊すため、iframe で隔てる。
+// 高さは中身に合わせて伸ばす（同じオリジンなので中を測れる）
+interface Props {
+  src: string;
+  title: string;
+}
+const { src, title } = Astro.props;
+---
+
+<figure class="legacy">
+  <iframe class="legacy-frame" src={src} title={title}></iframe>
+  <figcaption><a href={src}>別のタブで開く</a></figcaption>
+</figure>
+
+<script>
+  function fit(frame: HTMLIFrameElement) {
+    const doc = frame.contentDocument;
+    const win = frame.contentWindow as (Window & typeof globalThis) | null;
+    if (!doc || !win) return;
+    const resize = () => {
+      frame.style.height = `${doc.documentElement.scrollHeight}px`;
+    };
+    resize();
+    // 親の ResizeObserver では iframe の中の変化を受け取れないので、iframe 側のものを使う
+    new win.ResizeObserver(resize).observe(doc.body);
+  }
+  for (const frame of document.querySelectorAll<HTMLIFrameElement>("iframe.legacy-frame")) {
+    if (frame.contentDocument?.readyState === "complete" && frame.contentDocument.URL !== "about:blank") fit(frame);
+    frame.addEventListener("load", () => fit(frame));
+  }
+</script>
+
+<style>
+  .legacy {
+    margin: 0;
+  }
+  .legacy-frame {
+    display: block;
+    width: 100%;
+    min-height: 320px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    /* 古い作品は明るい背景を前提にしているので、ダークモードでも白地で見せる */
+    background: #fff;
+    color-scheme: light;
+  }
+  figcaption {
+    font-size: 13px;
+    margin-top: 6px;
+    text-align: right;
+  }
+</style>
