@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="関数の置き場所が速さを変える仕組みと、どうぶつしょうぎ完全解析RTAの記録 #33 がそれを固定する方法を、動くメモリの帯で説明する図解。">
+<meta name="description" content="関数がメモリのどこに置かれたかだけでプログラムの速さが変わる仕組みと、その止め方を、動くメモリの帯で説明する図解。">
 <title>関数の置き場所ラボ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
 html, body { margin: 0; }
 [hidden] { display: none !important; }
 img { max-width: 100%; }
-/* 構成: 上に1枚の「メモリの帯」ラボを固定し、下の段階ボタンで同じ帯を動かしながら話を進める */
+/* 構成: 前提を4枚のカードで渡し、そのあと1本の「メモリの帯」を段階ごとに動かして話を進める */
 :root {
   --bg: #eef2f5;
   --panel: #ffffff;
@@ -44,12 +44,21 @@ img { max-width: 100%; }
   --fix: #3cc7b0; --warn: #fb923c; --line-a: rgba(60,199,176,.12); color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.75; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.8; }
+a { color: var(--fix); }
 .wrap { max-width: 900px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 22px; }
 header { display: grid; gap: 6px; }
-.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); }
+.eyebrow a { color: inherit; }
 h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 0; text-wrap: balance; }
 .lede { margin: 0; color: var(--muted); max-width: 62ch; }
+h2.sec { font-family: var(--f-display); font-weight: 400; font-size: 20px; margin: 0; }
+.basics { display: grid; gap: 12px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.card h3 { margin: 0 0 4px; font-size: 15px; }
+.card p { margin: 0; font-size: 14px; }
+.card .num { font-family: var(--f-mono); color: var(--hot); margin-right: 6px; }
 .lab { background: var(--panel); border-radius: 14px; padding: 16px; display: grid; gap: 12px; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(20,40,60,.06); }
 .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
 .seg { display: inline-flex; border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; }
@@ -58,15 +67,16 @@ h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(26px, 5vw
 .slider { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .slider input { width: 160px; accent-color: var(--hot); }
 .slider output { font-family: var(--f-mono); color: var(--ink); min-width: 5.5em; }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--fix); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--fix); outline-offset: 2px; }
 .svgbox { overflow-x: auto; }
 svg { display: block; width: 100%; min-width: 600px; height: auto; }
 svg text { font-family: var(--f-mono); }
 .fn { transition: transform .7s cubic-bezier(.3,.7,.2,1); }
 .fnrect { transition: width .7s cubic-bezier(.3,.7,.2,1); }
-.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .ro { border: 1px solid var(--grid); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
-.ro .name { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.ro .name { font-size: 13px; color: var(--muted); }
+.ro .name code { font-family: var(--f-mono); font-size: 12px; }
 .ro .val { font-size: 15px; }
 .ro .val b { font-family: var(--f-mono); font-size: 18px; }
 .ro.bad .val b { color: var(--warn); }
@@ -90,7 +100,7 @@ td.moved { color: var(--warn); }
 td.same { color: var(--fix); }
 .tablebox { overflow-x: auto; }
 .note { font-size: 13px; color: var(--muted); max-width: 70ch; margin: 0; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 13px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
 @media (prefers-reduced-motion: reduce) { .fn, .fnrect { transition: none; } }
@@ -100,16 +110,30 @@ td.same { color: var(--fix); }
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow"><a href="/" style="color:inherit">keiichiro-sonoda.github.io</a> ／ <a href="https://github.com/keiichiro-sonoda/dobutsu-shogi-rta" style="color:inherit">dobutsu-shogi-rta</a> 記録 #33 の図解</div>
+    <div class="eyebrow"><a href="/">keiichiro-sonoda.github.io</a> ／ <a href="https://github.com/keiichiro-sonoda/dobutsu-shogi-rta">どうぶつしょうぎ完全解析RTA</a> ／ 記録 #33 の図解</div>
     <h1>同じ命令なのに、なぜ遅くなる？</h1>
-    <p class="lede">関数の「置き場所」が速さを変える仕組みと、#33 でそれをどう止めるかを、メモリの帯を動かしながら説明します。下の番号を順に押すか、帯の上のつまみを自分で動かしてください。</p>
+    <p class="lede">プログラムの中身を1文字も変えていない部分が、遅くなることがあります。原因は、関数がメモリの「どこに置かれたか」でした。その仕組みと直し方を、動く図で説明します。</p>
   </header>
+
+  <section class="basics" aria-labelledby="basics-h">
+    <h2 class="sec" id="basics-h">はじめに：このページの前提</h2>
+    <div class="cards">
+      <div class="card"><h3><span class="num">1</span>どんなプログラム？</h3>
+        <p>どうぶつしょうぎ（3×4マスの小さな将棋）で、最初の局面から指し進めて現れうる<b>2億4680万の局面すべて</b>について、勝ち負けと決着までの手数を決めるプログラムです。2021年に書いたものを少しずつ速くしていて、最初は8時間55分かかっていたのが、いまは約2分15秒です。速くする1回ごとに番号を付けて記録しています（記録 #32、#33 など）。</p></div>
+      <div class="card"><h3><span class="num">2</span>時間はどこで使っている？</h3>
+        <p>工程は大きく2つです。<b>全探索</b>：最初の局面から指せる手を全部たどって、局面を集める。<b>後退解析</b>：決着がついた局面から逆向きにたどって、勝ち負けを広げる。どちらも「ある局面から指せる手を全部作る」処理を何億回も繰り返していて、そこが時間の大半です。</p></div>
+      <div class="card"><h3><span class="num">3</span>関数・命令・番地</h3>
+        <p>プログラムは<b>関数</b>という部品の集まりです。コンパイルすると、関数は CPU が実行する<b>命令</b>（機械語）の列になり、メモリの上に並びます。メモリの位置は<b>番地</b>（バイト単位の住所のような番号）で表します。</p></div>
+      <div class="card"><h3><span class="num">4</span>速くなったかの確かめ方</h3>
+        <p>変える前の版と変えた後の版を、交互に6回ずつ走らせて、差の平均と「本当の差はたぶんこの範囲」という<b>区間</b>を出します。区間が 0 をまたがなければ、偶然ではない差と判断します。この比べ方を、このプロジェクトでは<b>門番</b>と呼んでいます。</p></div>
+    </div>
+  </section>
 
   <section class="lab" aria-label="メモリの帯">
     <div class="controls">
       <div class="seg" role="group" aria-label="配置">
-        <button id="lay-old" aria-pressed="true">いまの配置（#32）</button>
-        <button id="lay-new" aria-pressed="false">#33 の配置</button>
+        <button id="lay-old" aria-pressed="true">いまの配置（記録 #32）</button>
+        <button id="lay-new" aria-pressed="false">直した配置（記録 #33）</button>
       </div>
       <label class="slider" for="pad">前の関数を伸ばす
         <input id="pad" type="range" min="0" max="64" step="1" value="0">
@@ -119,10 +143,10 @@ td.same { color: var(--fix); }
     <div class="svgbox"><svg id="tape" viewBox="0 0 560 190" role="img" aria-label="64バイトごとに区切られたメモリと、その上に並ぶ関数"></svg></div>
     <div class="readouts" id="readouts"></div>
     <div class="chips" aria-hidden="true">
-      <span class="chip"><span class="sw" style="background:var(--hot)"></span>熱い関数（時間の大半を使う）</span>
+      <span class="chip"><span class="sw" style="background:var(--hot)"></span>熱い関数（実行時間の大半を使う関数）</span>
       <span class="chip"><span class="sw" style="background:var(--cold)"></span>ほかの関数</span>
       <span class="chip"><span class="sw" style="background:var(--loop)"></span>何億回も回るループ</span>
-      <span class="chip"><span class="sw" style="background:var(--line-a);border:1px solid var(--fix)"></span>CPU が1回に読む64バイト</span>
+      <span class="chip"><span class="sw" style="background:var(--line-a);border:1px solid var(--fix)"></span>ループを回すために CPU が読む64バイトのかたまり</span>
     </div>
   </section>
 
@@ -136,7 +160,7 @@ td.same { color: var(--fix); }
     </div>
   </section>
 
-  <p class="note">図は仕組みを見せるための模型です。関数の大きさや番地は実物の値ではありません。実際の CPU では、64バイトの区切りのほかに、解読済み命令の置き場や分岐予測の表も番地の影響を受けます。数字（+0.63 秒など）は記録 #32 の門番の実測です。</p>
+  <p class="note">図は仕組みを見せるための模型です。関数の大きさや番地は実物の値ではありません。実際の CPU では、64バイトのかたまりのほかに、解読済みの命令を置いておく場所や、分岐の向きを予想するための表も、番地の影響を受けます。0.63 秒などの数字は記録 #32 の門番の実測です。詳しい記録は <a href="https://github.com/keiichiro-sonoda/dobutsu-shogi-rta">dobutsu-shogi-rta のリポジトリ</a>にあります。</p>
 </div>
 
 <script>
@@ -146,9 +170,9 @@ td.same { color: var(--fix); }
   // 模型の関数。loop は関数の先頭からの位置と長さ
   const F = {
     show: { label: "showBoard", size: 70, hot: false },
-    inv:  { label: "nextBoardInvNormal", size: 120, hot: true, loop: [12, 40], short: "生成器のループ" },
-    huge: { label: "hugeAlloc", size: 50, hot: false },
-    succ: { label: "buildSuccRange", size: 100, hot: true, loop: [40, 40], short: "P2 のループ" },
+    inv:  { label: "nextBoardInvNormal", size: 120, hot: true, loop: [12, 40], role: "手を作る関数" },
+    huge: { label: "hugeAlloc", size: 64, hot: false },
+    succ: { label: "buildSuccRange", size: 100, hot: true, loop: [26, 40], role: "後退解析の関数" },
   };
   const state = { layout: "old", pad: 0 };
   const svg = document.getElementById("tape");
@@ -165,43 +189,37 @@ td.same { color: var(--fix); }
       const up = v => Math.ceil(v / LINE) * LINE;
       pos.inv = 0;
       pos.succ = up(pos.inv + F.inv.size);
-      const hotEnd = up(pos.succ + F.succ.size);
-      pos.show = hotEnd;
+      pos.show = up(pos.succ + F.succ.size);
       pos.huge = pos.show + F.show.size + pad;
     }
     return pos;
   }
-  const linesOf = (s, len) => { const a = Math.floor(s / LINE), b = Math.floor((s + len - 1) / LINE); return [a, b]; };
+  const linesOf = (s, len) => [Math.floor(s / LINE), Math.floor((s + len - 1) / LINE)];
 
-  // 静的な部分
-  el("rect", { x: 0, y: 0, width: 560, height: 190, fill: "transparent" });
-  const gGrid = el("g");
-  const gHotBracket = el("g");
-  const gFns = el("g");
-  const gReads = el("g");
+  const gGrid = el("g"), gReads = el("g"), gHot = el("g"), gFns = el("g");
   for (let i = 0; i <= 8; i++) {
     const x = X0 + i * LINE * SC;
     el("line", { x1: x, y1: 26, x2: x, y2: 150, stroke: "var(--grid)", "stroke-dasharray": "3 3" }, gGrid);
     el("text", { x, y: 18, "text-anchor": "middle", "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = (i * LINE).toString();
   }
-  el("text", { x: X0 + 8 * LINE + 6, y: 18, "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = "B";
+  el("text", { x: X0 + 8 * LINE + 6, y: 18, "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = "番地";
   const readBands = [];
   for (let i = 0; i < 8; i++) {
     readBands.push(el("rect", { x: X0 + i * LINE, y: 30, width: LINE, height: 112, fill: "var(--line-a)", stroke: "var(--fix)", "stroke-width": 1.2, opacity: 0, rx: 2 }, gReads));
   }
-  const hotBr = el("path", { d: "", fill: "none", stroke: "var(--hot)", "stroke-width": 1.5 }, gHotBracket);
-  const hotBrT = el("text", { x: 0, y: 166, "font-size": 10, fill: "var(--hot)" }, gHotBracket);
+  const hotBr = el("path", { d: "", fill: "none", stroke: "var(--hot)", "stroke-width": 1.5 }, gHot);
+  const hotBrT = el("text", { x: 0, y: 172, "font-size": 10, fill: "var(--hot)" }, gHot);
 
   const nodes = {};
   for (const k in F) {
     const f = F[k];
     const g = el("g", { class: "fn" }, gFns);
     const r = el("rect", { class: "fnrect", x: 0, y: 46, width: f.size * SC - 2, height: 70, rx: 5, fill: f.hot ? "var(--hot)" : "var(--cold)" }, g);
-    const t = el("text", { x: 6, y: 62, "font-size": 9.5, fill: f.hot ? "var(--hot-ink)" : "var(--cold-ink)" }, g);
-    t.textContent = f.label.length * 5.8 > f.size ? f.label.slice(0, Math.floor(f.size / 6)) + "…" : f.label;
-    let lr = null;
+    // 名前が箱に収まるように文字の大きさを決める（等幅で1文字 ≒ 0.6 em）
+    const fs = Math.min(9.5, (f.size - 10) / (f.label.length * 0.6));
+    el("text", { x: 5, y: 62, "font-size": fs.toFixed(2), fill: f.hot ? "var(--hot-ink)" : "var(--cold-ink)" }, g).textContent = f.label;
     if (f.loop) {
-      lr = el("rect", { x: f.loop[0], y: 82, width: f.loop[1], height: 26, rx: 3, fill: "var(--loop)" }, g);
+      el("rect", { x: f.loop[0], y: 82, width: f.loop[1], height: 26, rx: 3, fill: "var(--loop)" }, g);
       el("text", { x: f.loop[0] + f.loop[1] / 2, y: 99, "text-anchor": "middle", "font-size": 9, fill: "#3a2a00" }, g).textContent = "ループ";
     }
     nodes[k] = { g, r };
@@ -212,31 +230,28 @@ td.same { color: var(--fix); }
   function render() {
     const pos = layout(state.layout, state.pad);
     for (const k in F) {
-      const x = X0 + pos[k] * SC;
-      nodes[k].g.style.transform = `translate(${x}px, 0px)`;
+      nodes[k].g.style.transform = `translate(${X0 + pos[k] * SC}px, 0px)`;
       if (k === "show") nodes[k].r.setAttribute("width", (F.show.size + state.pad) * SC - 2);
     }
     padLabel.setAttribute("x", X0 + (pos.show + F.show.size) * SC + 2);
     padLabel.textContent = state.pad ? `伸びた分 +${state.pad}` : "";
-    // 熱いループが触る64バイトの区切り
     const used = new Set();
     let html = "";
     for (const k of ["inv", "succ"]) {
       const f = F[k];
-      const s = pos[k] + f.loop[0];
-      const [a, b] = linesOf(s, f.loop[1]);
+      const [a, b] = linesOf(pos[k] + f.loop[0], f.loop[1]);
       for (let i = a; i <= b; i++) used.add(i);
       const n = b - a + 1;
-      html += `<div class="ro ${n > 1 ? "bad" : "good"}"><span class="name">${f.label}（${f.short}）</span>` +
-              `<span class="val">番地 <b>0x${(BASE + pos[k]).toString(16)}</b></span>` +
-              `<span class="val">1周ごとに読む区切り <b>${n}</b> 回${n > 1 ? "（区切りをまたいでいる）" : ""}</span></div>`;
+      html += `<div class="ro ${n > 1 ? "bad" : "good"}"><span class="name">${f.role} <code>${f.label}</code></span>` +
+              `<span class="val">置き場所の番地 <b>0x${(BASE + pos[k]).toString(16)}</b></span>` +
+              `<span class="val">ループ1周で読むかたまり <b>${n}</b> 個${n > 1 ? "（境目をまたいでいる）" : ""}</span></div>`;
     }
     ro.innerHTML = html;
     readBands.forEach((r, i) => r.setAttribute("opacity", used.has(i) ? 1 : 0));
     if (state.layout === "new") {
-      const x1 = X0, x2 = X0 + (Math.ceil((pos.succ + F.succ.size) / LINE) * LINE) * SC;
-      hotBr.setAttribute("d", `M${x1} 154 v4 H${x2} v-4`);
-      hotBrT.setAttribute("x", x1); hotBrT.textContent = "熱い区画（先頭に固定、64バイトに揃える）";
+      const x2 = X0 + Math.ceil((pos.succ + F.succ.size) / LINE) * LINE * SC;
+      hotBr.setAttribute("d", `M${X0} 156 v4 H${x2} v-4`);
+      hotBrT.setAttribute("x", X0); hotBrT.textContent = "熱い関数の区画（先頭に固定し、64バイトの境目に揃える）";
     } else { hotBr.setAttribute("d", ""); hotBrT.textContent = ""; }
     document.getElementById("pad").value = state.pad;
     document.getElementById("pad-out").value = `+${state.pad} バイト`;
@@ -244,61 +259,61 @@ td.same { color: var(--fix); }
     document.getElementById("lay-new").setAttribute("aria-pressed", state.layout === "new");
   }
 
-  // 番地の表（段階7）
   function addrTable() {
     const pads = [0, 8, 24, 40, 100];
     let rows = "";
     for (const k of ["inv", "succ"]) {
       const o0 = layout("old", 0)[k], n0 = layout("new", 0)[k];
-      rows += `<tr><td>${F[k].label}</td>` + pads.map(p => {
+      rows += `<tr><td>${F[k].role}</td>` + pads.map(p => {
         const o = layout("old", p)[k];
         return `<td class="${o === o0 ? "same" : "moved"}">0x${(BASE + o).toString(16)}</td>`;
       }).join("") + `<td class="same">0x${(BASE + n0).toString(16)}</td></tr>`;
     }
-    return `<div class="tablebox"><table><thead><tr><th>熱い関数</th>${pads.map(p => `<th>いまの配置<br>詰め物 ${p}B</th>`).join("")}<th>#33 の配置<br>詰め物いくつでも</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="tablebox"><table><thead><tr><th>熱い関数</th>${pads.map(p => `<th>いまの配置<br>詰め物 ${p} バイト</th>`).join("")}<th>直した配置<br>詰め物がいくつでも</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
-  // 物語。各段階が帯の状態を決める
   let sweep = null;
-  const stopSweep = () => { if (sweep) { clearInterval(sweep); sweep = null; } document.getElementById("play").textContent = "▶ ずれを動かす"; };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const playBtn = document.getElementById("play");
+  const stopSweep = () => { if (sweep) { clearInterval(sweep); sweep = null; } playBtn.textContent = "▶ ずれを動かす"; };
   function startSweep() {
     stopSweep();
     if (reduce) { state.pad = 24; render(); return; }
-    let p = 0, dir = 1;
-    sweep = setInterval(() => { p += dir * 2; if (p >= 64 || p <= 0) dir = -dir; state.pad = p; render(); }, 90);
-    document.getElementById("play").textContent = "■ 止める";
+    let p = state.pad, dir = 1;
+    sweep = setInterval(() => { p += dir * 2; if (p >= 64) { p = 64; dir = -1; } if (p <= 0) { p = 0; dir = 1; } state.pad = p; render(); }, 90);
+    playBtn.textContent = "■ 止める";
   }
 
   const S = [
-    { layout: "old", pad: 0, h: "同じ命令なのに、0.63秒遅くなった",
-      b: `<p><span class="big">P2 +0.63 秒</span>（区間 +0.35〜+0.90）</p>
-          <p>記録 #32 の門番で起きたことです。#32 は全探索（F1）のための小さな変更で、後退解析の P2 が実行する命令は<b>1つも変わっていません</b>。それでも P2 は0.6秒遅くなりました。</p>
-          <p>変わったのは、関数がメモリのどこに置かれたか、だけでした。</p>` },
+    { layout: "old", pad: 0, h: "触っていない部分が、0.63秒遅くなった",
+      b: `<p><span class="big">+0.63 秒</span>（区間 +0.35〜+0.90 秒）</p>
+          <p>記録 #32 では、<b>全探索</b>の中の関数を1つだけ書き換えました。<b>後退解析</b>のほうは1文字も変えていません。それなのに門番で比べると、後退解析の「手を作って番号に直す工程」が平均 0.63 秒遅くなりました。区間が 0 をまたがないので、偶然とは言いにくい差です。</p>
+          <p>調べると、後退解析で CPU が実行する命令は、前とまったく同じでした。違っていたのは、<b>関数がメモリのどこに置かれたか</b>だけです。</p>` },
     { layout: "old", pad: 0, h: "関数は、書いた順に一列に並ぶ",
-      b: `<p>C のファイルをコンパイルすると、関数はおおむね書いた順に、メモリの上に一列に並びます。上の帯がそれです。目盛りはバイト単位の番地です。</p>
-          <p>オレンジ色が<b>熱い関数</b>で、実行時間の大半を使っています。黄色の部分は、その中で何億回も回るループです。</p>` },
+      b: `<p>C のプログラムをコンパイルすると、関数はおおむね書いた順に、メモリの上に一列に並びます。上の帯がそれで、目盛りはバイト単位の番地です（実物より単純にしてあります）。</p>
+          <p>オレンジ色は<b>熱い関数</b>、つまり実行時間の大半を使う関数です。ここでは「手を作る関数」と「後退解析の関数」の2つです。黄色の部分は、その中で何億回も回るループです。</p>` },
     { layout: "old", pad: 24, h: "前の関数が伸びると、後ろが全部ずれる",
-      b: `<p>前のほうの関数（ここでは <code>showBoard</code>）を少し書き換えて24バイト長くしました。<b>中身を触っていない後ろの関数まで、全部が同じだけ後ろにずれます。</b></p>
-          <p>上のつまみを動かして、ずれ方を確かめてみてください。</p>` },
-    { layout: "old", pad: 0, h: "CPU は、64バイトずつ区切って読む",
-      b: `<p>CPU は命令を1バイトずつではなく、<b>64バイトの区切りごと</b>にまとめて読み込みます。帯の点線が区切りで、緑の枠が、熱いループを回すために読む区切りです。</p>
-          <p>いまは2つのループとも、1つの区切りの中に収まっています。1周ごとに1回読めば済みます。</p>` },
-    { layout: "old", pad: 40, sweep: true, h: "ずれ方しだいで、区切りをまたぐ",
-      b: `<p>前の関数を40バイト伸ばすと、生成器のループが区切りをまたぎ、<b>1周ごとに2回</b>読むことになります（P2 のループは1回のまま）。伸ばす量が6バイトか7バイトかの違いだけでも、またぐかどうかが変わります。何億回も回るループなので、その差が積み上がります。</p>
-          <p>「▶ ずれを動かす」を押すと、ずれに応じて、どちらのループがまたぐかが入れ替わるのが見えます。<b>どれが得をしてどれが損をするかは、ずれ方しだいで予測できません。</b>これが #32 で P2 が動いた理由と読んでいる仕組みです。</p>` },
-    { layout: "new", pad: 0, sweep: true, h: "#33：熱い関数を先頭にまとめ、区切りに揃える",
-      b: `<p>#33 では、熱い関数を<b>専用の区画にまとめて先頭に置き</b>、それぞれの先頭を<b>64バイトの区切りに揃えます</b>。ほかの関数はその後ろに回します。</p>
+      b: `<p>前のほうにある関数（ここでは <code>showBoard</code>）を書き換えて、24バイト長くしました。すると、<b>中身を触っていない後ろの関数まで、全部が24バイトずつ後ろにずれます。</b>番地の数字も変わっています。</p>
+          <p>帯の上のつまみを動かして、ずれ方を確かめてみてください。</p>` },
+    { layout: "old", pad: 0, h: "CPU は、64バイトのかたまりで読む",
+      b: `<p>CPU は命令をメモリから1バイトずつ読むのではなく、<b>64バイトのかたまり</b>でまとめて取ってきます。帯の点線がかたまりの境目で、緑の枠が、熱いループを回すために読むかたまりです。</p>
+          <p>いまは2つのループとも、1つのかたまりの中に収まっています。ループを1周回すのに、かたまりを1個読めば済みます。</p>` },
+    { layout: "old", pad: 40, h: "ずれ方しだいで、境目をまたぐ",
+      b: `<p>前の関数を40バイト伸ばすと、手を作る関数のループが境目をまたぎ、<b>1周ごとにかたまりを2個</b>読むことになりました。後退解析の関数のループは、1個のままです。</p>
+          <p>伸ばす量が6バイトか7バイトかの違いだけでも、またぐかどうかが変わります。「▶ ずれを動かす」を押すと、ずれ方に応じて、どちらのループがまたぐかが入れ替わるのが見えます。<b>どれが得をしてどれが損をするかは、ずれ方しだいで、前もって分かりません。</b>ループは何億回も回るので、小さな差が積み上がります。</p>
+          <p>記録 #32 で後退解析が遅くなったのは、こうした置き場所の違いのせいだと考えています（実際の CPU では、ほかの仕組みも番地の影響を受けます）。</p>` },
+    { layout: "new", pad: 0, sweep: true, h: "記録 #33：熱い関数を先頭にまとめ、境目に揃える",
+      b: `<p>記録 #33 では、熱い関数を<b>専用の区画にまとめて先頭に置き</b>、それぞれの始まりを<b>64バイトの境目に揃えます</b>。ほかの関数はその後ろに回します。</p>
           <p>この状態でつまみを動かしても、ずれるのは後ろのほかの関数だけで、熱い関数は1バイトも動きません。</p>
-          <p>⚠️ 揃えても、生成器のループはまたがず、P2 のループはまたいだままです。<b>#33 が固定するのは速さではなく「ぶれ」</b>です。だから門番では、速くなる向きも遅くなる向きも予測しません。</p>` },
-    { layout: "new", pad: 24, h: "確かめ方：詰め物の検査",
-      b: `<p>効いているかどうかは、時間を測る前に<b>番地で</b>確かめられます。熱くない場所に大きさの違う詰め物を足した版をいくつかビルドし、熱い関数の番地を比べます。</p>
+          <p>⚠️ 揃えても、後退解析の関数のループは境目をまたいだままです。<b>#33 が止めるのは「ずれによるぶれ」で、速くなるとは限りません。</b>だから門番では、速くなるとも遅くなるとも予想を立てていません。</p>` },
+    { layout: "new", pad: 24, h: "効いたかどうかの確かめ方",
+      b: `<p>効いているかどうかは、時間を測らなくても<b>番地で</b>確かめられます。熱くない場所に、大きさの違う「詰め物」を足した版をいくつか作って、熱い関数の番地を比べます。</p>
           <div id="addr"></div>
-          <p class="note">この表は上の模型で計算した値です。実際の検査では、ビルドした <code>.so</code> を <code>nm</code> で読んで比べ、テストに固定します。</p>` },
-    { layout: "new", pad: 0, h: "固定できる範囲と、できない範囲",
-      b: `<p><b>ほかの関数を変えたとき</b>：熱い関数は1バイトも動かない。#33 はこれを保証します。以後の門番で出る差は、変えたコードの効果だけになります。</p>
-          <p><b>熱い関数そのものを変えたとき</b>：後ろの熱い関数はずれます。ただし区切りに揃えてあるので、ずれは64バイト単位になり、区切りとの位置関係は保たれます。解読済み命令の置き場や分岐予測の表の当たり方までは保証できません。</p>
-          <p>残っている改善は1つあたり1秒前後かそれ以下です。置き場所のぶれ（±0.5秒前後）を止めておかないと、効いたのかどうかを見分けられません。</p>` },
+          <p class="note">この表は上の模型で計算した値です。実際の検査では、作ったプログラムから関数の番地を読み出して比べ、自動のテストにします。</p>` },
+    { layout: "new", pad: 0, h: "止められる範囲と、なぜ大事か",
+      b: `<p><b>ほかの関数を変えたとき</b>：熱い関数は1バイトも動きません。#33 はこれを保証します。</p>
+          <p><b>熱い関数そのものを変えたとき</b>：後ろの熱い関数はずれます。ただし境目に揃えてあるので、ずれは64バイト単位になり、かたまりの境目との位置関係は保たれます。そのほかの仕組みの当たり方までは保証できません。</p>
+          <p>このプロジェクトに残っている改善は、1回あたり1秒前後かそれ以下のものが多くなっています。置き場所のぶれ（±0.5秒前後）を止めておかないと、改善が効いたのか、置き場所がたまたま良くなっただけなのかを、見分けられません。</p>` },
   ];
   let cur = 0;
   const stepsNav = document.getElementById("steps");
@@ -321,7 +336,7 @@ td.same { color: var(--fix); }
   }
   document.getElementById("prev").addEventListener("click", () => go(cur - 1));
   document.getElementById("next").addEventListener("click", () => go(cur + 1));
-  document.getElementById("play").addEventListener("click", () => sweep ? stopSweep() : startSweep());
+  playBtn.addEventListener("click", () => sweep ? stopSweep() : startSweep());
   document.getElementById("pad").addEventListener("input", e => { stopSweep(); state.pad = +e.target.value; render(); });
   document.getElementById("lay-old").addEventListener("click", () => { state.layout = "old"; render(); });
   document.getElementById("lay-new").addEventListener("click", () => { state.layout = "new"; render(); });
