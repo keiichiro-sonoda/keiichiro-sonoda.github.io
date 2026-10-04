@@ -1,9 +1,10 @@
-_site
-.sass-cache
-.jekyll-cache
-.jekyll-metadata
-vendor
-__pycache__/
+# npm と Astro の生成物
 node_modules/
 dist/
 .astro/
+# tools/vendor.mjs が node_modules から写すもの
+public/vendor/
+# Jekyll 時代の生成物（手元に残っていることがある）
+_site/
+.jekyll-cache/
+__pycache__/

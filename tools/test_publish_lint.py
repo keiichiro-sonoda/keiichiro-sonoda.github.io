@@ -187,6 +187,47 @@ class PublishLintTest(unittest.TestCase):
         line = f"refs/heads/gh-pages {head} refs/heads/gh-pages {'1' * 40}\n"
         self.assertCode(self.r.lint("--hook", stdin=line), 2)
 
+    # ---- ビルドの成果物（--dir） --------------------------------------------
+    def test_dir_clean_build_passes(self) -> None:
+        self.r.write("dist/index.html", '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=X">\n'
+                     '<link rel="preconnect" href="https://fonts.gstatic.com">\n<script src="/vendor/a.js"></script>\n')
+        self.r.write("dist/vendor/a.js", "var v='" + ".".join("1234") + "';\n")  # 版番号は IP の形に当たる
+        p = self.r.lint("--dir", "dist")
+        self.assertCode(p, 0)
+        self.assertIn("ファイル 2 個", p.stdout)
+
+    def test_dir_external_script_stops(self) -> None:
+        self.r.write("dist/a.html", "<p>x</p>\n<script\n  async src='https://cdn.example.com/lib.js'></script>\n")
+        p = self.r.lint("--dir", "dist")
+        self.assertCode(p, 1)
+        self.assertIn("[S7]", p.stderr)
+        self.assertIn("cdn.example.com", p.stderr)
+
+    def test_dir_external_stylesheet_outside_list_stops(self) -> None:
+        self.r.write("dist/a.html", '<link href="//cdn.example.com/a.css" rel="stylesheet">\n')
+        self.assertCode(self.r.lint("--dir", "dist"), 1)
+
+    def test_dir_user_path_stops_in_pages_but_not_in_vendor(self) -> None:
+        self.r.write("dist/vendor/lib.js", f"// built at {HOMEPATH}\n")
+        self.assertCode(self.r.lint("--dir", "dist"), 0)
+        self.r.write("dist/post.html", f"<pre>{HOMEPATH}</pre>\n")
+        p = self.r.lint("--dir", "dist")
+        self.assertCode(p, 1)
+        self.assertIn("post.html", p.stderr)
+
+    def test_dir_token_stops_even_in_vendor(self) -> None:
+        self.r.write("dist/vendor/lib.js", f"var k='{TOKEN}';\n")
+        p = self.r.lint("--dir", "dist")
+        self.assertCode(p, 1)
+        self.assertIn("[S1]", p.stderr)
+
+    def test_dir_deny_word_stops(self) -> None:
+        self.r.write("dist/a.html", f"<p>{WORD}</p>\n")
+        self.assertCode(self.r.lint("--dir", "dist"), 1)
+
+    def test_dir_missing_cannot_check(self) -> None:
+        self.assertCode(self.r.lint("--dir", "dist"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 # 図解の作り方
 
-このサイトの図解（`explainers/`）を作るときの観点。**下の「指摘された失敗」は、実際にこのリポジトリの図解で
+このサイトの図解（`/explainers/<名前>/`）を作るときの観点。**下の「指摘された失敗」は、実際にこのリポジトリの図解で
 読者から指摘されたもの**で、同じ指摘を二度受けないために置いてある。
 
 ## 図解の目標
@@ -80,9 +80,21 @@
 
 ## サイトに置く形
 
-- `explainers/<名前>/index.html` に、`<!doctype html>` から始まる1枚の HTML として置く。**front matter を付けない**
-  （Jekyll が加工せずにそのまま配信する）
-- 外部から読むのは Google Fonts と、必要ならピン留めした CDN のスクリプトだけ。それ以外は HTML に入れる
-- 冒頭の小見出しに、サイトのトップ（`/`）へのリンクを入れる
-- `_posts/` に紹介の記事を1本置く（日付は実際の時刻。未来の日付にすると Jekyll が出さない）
-- ローカルで確かめる: `bundle exec jekyll serve` → `http://127.0.0.1:4000/explainers/<名前>/`
+サイトは Astro でビルドする。動く部分は React の部品にし、動かない部分は Astro のページに HTML で書く。
+見本は「関数の置き場所ラボ」（`src/components/hot-layout/` と `src/pages/explainers/hot-layout/index.astro`）。
+
+| 置く場所 | 中身 |
+|---|---|
+| `src/components/<名前>/model.ts` | 模型の計算。画面に依存させない（検算しやすく、図解と記事の両方で使える） |
+| `src/components/<名前>/*.tsx` | 動く部品（React）。状態を持たない描画の部品と、状態を持つ外側の部品に分ける |
+| `src/components/<名前>/<名前>.css` | 見た目。**1つのクラス（例 `.hl`）の中に閉じ込める**（サイトのほかのページに漏らさない） |
+| `src/pages/explainers/<名前>/index.astro` | 図解のページ。前提のカードと注記は HTML で書き、動く部品だけを `client:load` で読み込む。レイアウトは `Base` を `wide` で使う |
+| `src/content/posts/YYYY-MM-DD-<名前>.mdx` | 紹介の記事。front matter は `title`・`date`（`+0900` を付ける）・`description`。記事の中にも部品を置ける（`client:visible`） |
+
+- **外部から読み込むのは Google Fonts だけ。**ライブラリは npm で版を固定して入れる（`npm install --save-exact`）。
+  React の部品から使うなら `import` する（Astro が束ねる）。素の `<script>` から使うなら `tools/vendor.mjs` の表に足し、
+  `/vendor/<名前>/...` から読む。外部の `<script src>` は公開前検査（S7）が止める
+- 冒頭の小見出しに、元のプロジェクトへのリンクを入れる（サイトのトップへのリンクはレイアウトのヘッダにある）
+- 記事の日付は実際の時刻にする。**Astro は未来の日付の記事も出す**（Jekyll と違う）。下書きは `draft: true`（ビルドでは出ない）
+- ローカルで確かめる: `npm run dev` → `http://localhost:4321/explainers/<名前>/`。保存すると画面がすぐ変わる
+- 仕上げに `npm run check`（型）と `npm run build` を通す

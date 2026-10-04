@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "vendor": "node tools/vendor.mjs",
+    "predev": "node tools/vendor.mjs",
     "dev": "astro dev",
+    "prebuild": "node tools/vendor.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check"
@@ -12,6 +15,9 @@
     "@astrojs/mdx": "^8.0.2",
     "@astrojs/react": "^7.0.0",
     "astro": "^7.3.5",
+    "chart.js": "4.5.1",
+    "mathjax2": "npm:mathjax@2.7.9",
+    "mathjax3": "npm:mathjax@3.2.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
@@ -20,5 +26,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

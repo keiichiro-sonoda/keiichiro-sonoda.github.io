@@ -1,6 +1,6 @@
 ---
 name: make-explainer
-description: このサイトに置く図解（explainers/ の動く図・図解ページ）を作る・直すときに使う。初めて見る人がそのページだけで分かること、過去に指摘された失敗（文字の途切れ、前提知識の不足、見るべき部分が分からない図、直した状態が直っていないように見える例、半端な並び）を繰り返さないことが目的。
+description: このサイトに置く図解（/explainers/ の動く図・図解ページ）を作る・直すときに使う。初めて見る人がそのページだけで分かること、過去に指摘された失敗（文字の途切れ、前提知識の不足、見るべき部分が分からない図、直した状態が直っていないように見える例、半端な並び）を繰り返さないことが目的。
 ---
 
 # 図解を作る
@@ -15,9 +15,10 @@ description: このサイトに置く図解（explainers/ の動く図・図解�
 3. ガイドの「作るときの手順」どおりに作る。模型の数値で主張を書くときは、先に式で検算する
 4. ガイドの「仕上げる前の確認」を**全部**やる。動く図は、すべての状態を実際に表示して見る
    （ブラウザで見られるなら見る。見られないなら、状態ごとの座標と文字の幅を計算で確かめる）
-5. `explainers/<名前>/index.html` に置き、`_posts/` に紹介の記事を足す
-6. `bundle exec jekyll build` で出力を確かめ、`python3 tools/publish_lint.py` を通す
-7. push はしない。本人に見てもらう（`bundle exec jekyll serve` で確かめる方法を添える）
+5. ガイドの「サイトに置く形」どおりに置く（部品は `src/components/<名前>/`、ページは `src/pages/explainers/<名前>/index.astro`、
+   紹介の記事は `src/content/posts/`）
+6. `npm run check` と `npm run build` を通し、`python3 tools/publish_lint.py --dir dist` と `python3 tools/publish_lint.py` を通す
+7. push はしない。本人に見てもらう（`npm run dev` → `http://localhost:4321/explainers/<名前>/` で確かめる方法を添える）
 
 ## 指摘を受けたら
 

@@ -18,6 +18,7 @@
 | S4 | 公開してはいけない名前のファイル（鍵・`.env`・ビルドの出力） | 各コミットで足したファイル |
 | S5 | 中身を検査できないファイル（画像などのバイナリ） | 各コミットで足した・変えたファイル |
 | S6 | コミットメッセージの会話ログへのポインタ | 各コミットのメッセージ |
+| S7 | 外部のドメインから読み込むスクリプト・スタイル（許可した一覧の外） | `--dir`（ビルドの成果物の HTML）だけ |
 
 - **コミットを1つずつ見る。**足して次のコミットで消しても、履歴には残る。最終の差分だけを
   見ると、その形を見逃す
@@ -26,12 +27,20 @@
 - **S5 は止めるが、見たうえで通せる。**画像は中身を機械で読めない（画面写真に名前や
   パスが写り込むことがある）。自分の目で見てから `publish-allow.txt` に登録したものだけ通す
 - **検査できなかったら通さない。**比較先が無い・git が答えない・一覧が無いときは終了コード 2
+- **`--dir` はビルドの成果物を見る。**サイトは Astro でビルドしてから公開するので、公開されるのは
+  コミットの中身そのものではない（部品が束ねられ、npm の中身も混ざる）。GitHub Actions が、公開する
+  直前の成果物に S1〜S4 と S7 をかける。S5 は見ない（バイナリはコミットの時点で見ている）
+- **S7 だけは「取り消せないもの」ではない。**ただ、外部の `<script src>` は、そのドメインの今の持ち主に
+  このサイトの上で任意のコードを実行させるのと同じで、持ち主が変わっても気づけないまま配り続ける
+  （polyfill.io は 2024 年に売られ、読み込んでいたサイトに悪意のあるコードを配った）。
+  ライブラリは npm で版を固定して入れ、`public/vendor/` から配る（`tools/vendor.mjs`）
 
 使い方:
 
     python3 tools/publish_lint.py                    # origin/gh-pages..HEAD を見る
     python3 tools/publish_lint.py --base <ref>       # 比較先を変える
     python3 tools/publish_lint.py --hook             # pre-push フックから（標準入力で ref を受け取る）
+    python3 tools/publish_lint.py --dir dist         # ビルドの成果物を見る（GitHub Actions から）
 
 終了コード: 0 = 通す / 1 = 止めるものがあった / 2 = 検査できなかった（通さない）
 """
@@ -86,7 +95,10 @@ IPV4 = ("IP アドレスらしき文字列", re.compile(r"(?<![\w.])(?:\d{1,3}\.
 # メッセージでは、署名の行（`Co-Authored-By:` など）のメールだけ通す
 TRAILER = re.compile(r"^[A-Za-z][A-Za-z-]*-[Bb]y:\s")
 # 生成物なので中身を選べない（版番号が IP の形に当たる）
-GENERATED = ("Gemfile.lock",)
+GENERATED = ("package-lock.json",)
+# 成果物の中で、npm から写したもの・束ねたもの。個人や機械の情報は入りようがなく、版番号などが S2 に当たるので S2 を見ない
+# （S1 も、トークンや鍵の決まった形だけを見る）
+THIRD_PARTY = ("vendor/", "_astro/")
 
 # --------------------------------------------------------------------------
 # S4 公開してはいけない名前
@@ -94,13 +106,24 @@ GENERATED = ("Gemfile.lock",)
 BAD_NAMES = (
     ("鍵らしきファイル", re.compile(r"(?:^|/)(?:id_rsa|id_ed25519|id_ecdsa)[^/]*$|\.(?:pem|key|p12|pfx)$")),
     ("環境変数のファイル", re.compile(r"(?:^|/)\.env(?:\.[^/]*)?$")),
-    ("Jekyll のビルドの出力", re.compile(r"^(?:_site|\.jekyll-cache|\.sass-cache)/")),
+    ("ビルドの出力・npm の中身", re.compile(r"^(?:dist|\.astro|node_modules|public/vendor)/")),
 )
 
 # --------------------------------------------------------------------------
 # S6 会話ログへのポインタ
 # --------------------------------------------------------------------------
 SESSION_LINE = re.compile(r"^\s*Claude-Session:\s*(?:\S+://|[0-9A-Fa-f][0-9A-Fa-f-]{15,})", re.MULTILINE)
+
+# --------------------------------------------------------------------------
+# S7 外部から読み込むスクリプト・スタイル
+# 足すときは、そのドメインを誰が持っているか・持ち主が変わったら何が起きるかを考えてから
+# --------------------------------------------------------------------------
+ALLOWED_HOSTS = (
+    "fonts.googleapis.com",  # Google Fonts の CSS（スクリプトではない）
+)
+LOAD_TAG = re.compile(r"<(script|link)\b[^>]*>", re.IGNORECASE)
+ATTR = re.compile(r"""\b(src|href|rel)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.IGNORECASE)
+EXTERNAL_URL = re.compile(r"^(?:https?:)?//([^/?#:]+)", re.IGNORECASE)
 
 
 class CannotCheck(Exception):
@@ -238,6 +261,59 @@ def check_commit(sha: str, words: list[str]) -> list[tuple[str, str, str]]:
     return found
 
 
+def external_loads(html: str) -> list[tuple[str, str]]:
+    """外部から読み込む <script src> と <link rel="stylesheet|preload|modulepreload"> の (タグ, ドメイン)"""
+    out = []
+    for m in LOAD_TAG.finditer(html):
+        tag = m.group(1).lower()
+        attrs = {}
+        for a in ATTR.finditer(m.group(0)):
+            attrs[a.group(1).lower()] = next(g for g in a.groups()[1:] if g is not None)
+        if tag == "script":
+            url = attrs.get("src")
+        elif set(attrs.get("rel", "").lower().split()) & {"stylesheet", "preload", "modulepreload"}:
+            url = attrs.get("href")
+        else:
+            continue  # preconnect やアイコンはコードを読み込まない
+        if url and (host := EXTERNAL_URL.match(url.strip())):
+            out.append((tag, host.group(1).lower()))
+    return out
+
+
+def check_dir(top: pathlib.Path, words: list[str]) -> tuple[int, list[tuple[str, str, str]]]:
+    """ビルドの成果物を見る。S1〜S3 は中身の行ごと、S4 はパス、S7 は HTML"""
+    if not top.is_dir():
+        raise CannotCheck(f"検査するディレクトリが無い: {top}（先にビルドすること）")
+    files = sorted(p for p in top.rglob("*") if p.is_file())
+    if not files:
+        raise CannotCheck(f"検査するディレクトリが空: {top}")
+    found = []
+    for f in files:
+        rel = f.relative_to(top).as_posix()
+        for name, rx in BAD_NAMES:
+            if rx.search(rel):
+                found.append(("S4", rel, name))
+        data = f.read_bytes()
+        if b"\0" in data[:8192]:
+            continue  # バイナリ（画像・フォント）。コミットの時点で S5 が見ている
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        third_party = rel.startswith(THIRD_PARTY)
+        for i, line in enumerate(text.splitlines(), 1):
+            for rule, where, what in check_text(f"{rel}:{i}", line, words, in_message=False):
+                # 圧縮したコードは password=... のような形をいくらでも含むので、大まかな「秘密らしき代入」も見ない
+                if third_party and (rule == "S2" or what.startswith("秘密らしき代入")):
+                    continue
+                found.append((rule, where, what))
+        if rel.endswith(".html"):
+            for tag, host in external_loads(text):
+                if host not in ALLOWED_HOSTS:
+                    found.append(("S7", rel, f"外部から読み込む <{tag}>: {host}（npm で入れて public/vendor/ から配る）"))
+    return len(files), found
+
+
 def commits_for_range(base: str, head: str) -> list[str]:
     git("rev-parse", "--verify", f"{base}^{{commit}}")
     return git("rev-list", "--reverse", f"{base}..{head}").split()
@@ -269,19 +345,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--base", default="origin/gh-pages")
     ap.add_argument("--head", default="HEAD")
     ap.add_argument("--hook", action="store_true", help="pre-push フックとして標準入力から ref を読む")
+    ap.add_argument("--dir", type=pathlib.Path, help="コミットではなく、このディレクトリ（ビルドの成果物）を見る")
     a = ap.parse_args(argv)
     try:
         words = deny_words()
-        if a.hook:
+        if a.dir is not None:
+            print(f"検査: {a.dir}（ビルドの成果物）")
+            n, found = check_dir(a.dir, words)
+            label = f"ファイル {n} 個"
+        elif a.hook:
             ranges = commits_for_hook(sys.stdin.read())
         else:
             ranges = [(f"{a.base}..{a.head}", commits_for_range(a.base, a.head))]
-        total, found = 0, []
-        for label, shas in ranges:
-            print(f"検査: {label}（コミット {len(shas)} 個）")
-            total += len(shas)
-            for sha in shas:
-                found += check_commit(sha, words)
+        if a.dir is None:
+            total, found = 0, []
+            for rng, shas in ranges:
+                print(f"検査: {rng}（コミット {len(shas)} 個）")
+                total += len(shas)
+                for sha in shas:
+                    found += check_commit(sha, words)
+            label = f"コミット {total} 個"
     except CannotCheck as e:
         print(f"検査できない（通さない）: {e}", file=sys.stderr)
         return 2
@@ -289,9 +372,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n止める: {len(found)} 件", file=sys.stderr)
         for rule, where, what in found:
             print(f"  [{rule}] {where}  {what}", file=sys.stderr)
-        print("\n直してからコミットし直すこと（足して消すだけでは履歴に残る。まだ push していないなら、コミットを作り直す）", file=sys.stderr)
+        if a.dir is None:
+            print("\n直してからコミットし直すこと（足して消すだけでは履歴に残る。まだ push していないなら、コミットを作り直す）", file=sys.stderr)
+        else:
+            print("\n公開しない。元になったコミットを直すこと", file=sys.stderr)
         return 1
-    print(f"通す: コミット {total} 個に、止めるものは無かった（公開しない言葉 {len(words)} 語で照合）")
+    print(f"通す: {label}に、止めるものは無かった（公開しない言葉 {len(words)} 語で照合）")
     return 0
 
 
