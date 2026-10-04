@@ -144,6 +144,7 @@ td.same { color: var(--fix); }
     <div class="svgbox"><svg id="tape" viewBox="0 0 560 190" role="img" aria-label="64バイトごとに区切られたメモリと、その上に並ぶ関数"></svg></div>
     <div class="readouts" id="readouts"></div>
     <div class="chips" aria-hidden="true">
+      <span class="chip">目盛り＝番地（バイト）</span>
       <span class="chip"><span class="sw" style="background:var(--hot)"></span>熱い関数（実行時間の大半を使う関数）</span>
       <span class="chip"><span class="sw" style="background:var(--cold)"></span>ほかの関数</span>
       <span class="chip"><span class="sw" style="background:var(--loop)"></span>何億回も回るループ</span>
@@ -173,7 +174,7 @@ td.same { color: var(--fix); }
     show: { label: "showBoard", size: 70, hot: false },
     inv:  { label: "nextBoardInvNormal", size: 120, hot: true, loop: [12, 40], role: "手を作る関数" },
     huge: { label: "hugeAlloc", size: 64, hot: false },
-    succ: { label: "buildSuccRange", size: 100, hot: true, loop: [26, 40], role: "後退解析の関数" },
+    succ: { label: "buildSuccRange", size: 100, hot: true, loop: [10, 40], role: "後退解析の関数" },
   };
   const state = { layout: "old", pad: 0 };
   const svg = document.getElementById("tape");
@@ -203,8 +204,7 @@ td.same { color: var(--fix); }
     el("line", { x1: x, y1: 26, x2: x, y2: 150, stroke: "var(--ink)", "stroke-opacity": .45, "stroke-width": 1, "stroke-dasharray": "3 3" }, gGrid);
     el("text", { x, y: 18, "text-anchor": "middle", "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = (i * LINE).toString();
   }
-  el("text", { x: X0 + 8 * LINE + 6, y: 18, "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = "番地";
-  const readBands = [];
+    const readBands = [];
   for (let i = 0; i < 8; i++) {
     readBands.push(el("rect", { x: X0 + i * LINE, y: 30, width: LINE, height: 112, fill: "var(--line-a)", stroke: "var(--fix)", "stroke-width": 1.2, opacity: 0, rx: 2 }, gReads));
   }
@@ -306,14 +306,14 @@ td.same { color: var(--fix); }
       b: `<p>CPU は命令をメモリから1バイトずつ読むのではなく、<b>64バイトのかたまり</b>でまとめて取ってきます。帯の点線がかたまりの境目で、緑の枠が、熱いループを回すために読むかたまりです。</p>
           <p>いまは2つのループとも、1つのかたまりの中に収まっています。ループを1周回すのに、かたまりを1個読めば済みます。</p>
           <p>見るのは<b>黄色のループが点線をまたぐかどうか</b>です。オレンジの箱（関数全体）は点線をまたいでいても数えません。図を簡単にするため、何億回も回るループの部分だけを数えています。またいだときは、赤い線と「ループが境目をまたぐ」が出ます。</p>` },
-    { layout: "old", pad: 40, h: "ずれ方しだいで、境目をまたぐ",
-      b: `<p>前の関数を40バイト伸ばすと、手を作る関数のループが境目をまたぎ、<b>1周ごとにかたまりを2個</b>読むことになりました。後退解析の関数のループは、1個のままです。</p>
+    { layout: "old", pad: 10, h: "ずれ方しだいで、境目をまたぐ",
+      b: `<p>前の関数を10バイト伸ばすと、手を作る関数のループが境目をまたぎ、<b>1周ごとにかたまりを2個</b>読むことになりました。後退解析の関数のループは、1個のままです。</p>
           <p>伸ばす量が6バイトか7バイトかの違いだけでも、またぐかどうかが変わります。「▶ ずれを動かす」を押すと、ずれ方に応じて、どちらのループがまたぐかが入れ替わるのが見えます。<b>どれが得をしてどれが損をするかは、ずれ方しだいで、前もって分かりません。</b>ループは何億回も回るので、小さな差が積み上がります。</p>
           <p>記録 #32 で後退解析が遅くなったのは、こうした置き場所の違いのせいだと考えています（実際の CPU では、ほかの仕組みも番地の影響を受けます）。</p>` },
     { layout: "new", pad: 0, sweep: true, h: "記録 #33：熱い関数を先頭にまとめ、境目に揃える",
       b: `<p>記録 #33 では、熱い関数を<b>専用の区画にまとめて先頭に置き</b>、それぞれの始まりを<b>64バイトの境目に揃えます</b>。ほかの関数はその後ろに回します。</p>
-          <p>この状態でつまみを動かしても、ずれるのは後ろのほかの関数だけで、熱い関数は1バイトも動きません。</p>
-          <p>⚠️ 揃えても、後退解析の関数のループは境目をまたいだままです。<b>#33 が止めるのは「ずれによるぶれ」で、速くなるとは限りません。</b>だから門番では、速くなるとも遅くなるとも予想を立てていません。</p>` },
+          <p>この状態でつまみを動かしても、ずれるのは後ろのほかの関数だけで、熱い関数は1バイトも動きません。下の「読むかたまり」の数も変わりません。「▶ ずれを動かす」で確かめてみてください。</p>
+          <p>この模型では、揃えた結果、2つのループともかたまり1個に収まりました。⚠️ ただし、これは<b>たまたま</b>です。実物では、関数の始まりを揃えても、ループが関数の中のどこにあるかによっては境目をまたいだままになります。<b>#33 が保証するのは「速くなること」ではなく「ほかの変更で動かないこと」</b>です。だから門番では、速くなるとも遅くなるとも予想を立てていません。</p>` },
     { layout: "new", pad: 24, h: "効いたかどうかの確かめ方",
       b: `<p>効いているかどうかは、時間を測らなくても<b>番地で</b>確かめられます。熱くない場所に、大きさの違う「詰め物」を足した版をいくつか作って、熱い関数の番地を比べます。</p>
           <div id="addr"></div>
