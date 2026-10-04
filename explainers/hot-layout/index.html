@@ -54,7 +54,8 @@ h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(26px, 5vw
 .lede { margin: 0; color: var(--muted); max-width: 62ch; }
 h2.sec { font-family: var(--f-display); font-weight: 400; font-size: 20px; margin: 0; }
 .basics { display: grid; gap: 12px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
 .card { background: var(--panel); border-radius: 12px; padding: 14px 16px; min-width: 0; }
 .card h3 { margin: 0 0 4px; font-size: 15px; }
 .card p { margin: 0; font-size: 14px; }
