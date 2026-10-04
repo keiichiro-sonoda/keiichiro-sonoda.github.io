@@ -65,3 +65,5 @@ exclude:
   - tools
   - PUBLISHING.md
   - publish-allow.txt
+  - CLAUDE.md
+  - docs
