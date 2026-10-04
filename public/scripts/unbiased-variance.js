@@ -1,4 +1,5 @@
-MathJax.Hub.Queue(() => {
+// 数式の描画が終わってから枠を付ける（MathJax 3。2026-10 に MathJax 2 の MathJax.Hub.Queue から移した）
+MathJax.startup.promise.then(() => {
     applyStyle();
 });
 
@@ -8,17 +9,13 @@ MathJax.Hub.Queue(() => {
  * For inline equations without link, we wrap them in div with class "mjx-inline-wrapper".
  */
 function applyStyle() {
-    const mjscDisplayElements = Array.from(document.getElementsByClassName("MJXc-display"));
-    let mjxChtmlElements = Array.from(document.getElementsByClassName("mjx-math"));
+    const containers = Array.from(document.querySelectorAll("mjx-container"));
 
-    mjscDisplayElements.forEach(mjscDisplayElement => {
-        mjxChtmlElements = mjxChtmlElements.filter(mjxChtmlElement => !mjscDisplayElement.contains(mjxChtmlElement));
-        wrapElement(mjscDisplayElement, "mjx-wrapper");
-    });
-
-    mjxChtmlElements.forEach(mjxChtmlElement => {
-        if (!mjxChtmlElement.querySelector("a")) {
-            wrapElement(mjxChtmlElement, "mjx-inline-wrapper");
+    containers.forEach(container => {
+        if (container.getAttribute("display") === "true") {
+            wrapElement(container, "mjx-wrapper");
+        } else if (!container.querySelector("a")) {
+            wrapElement(container, "mjx-inline-wrapper");
         }
     });
 }

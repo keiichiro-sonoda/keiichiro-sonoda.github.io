@@ -5,13 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width" initial-scale="1.0">
     <title>不偏分散はなぜn-1で割るのか</title>
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-            TeX: { equationNumbers: { autoNumber: "AMS" } },
-            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-        });
+    <script>
+        // MathJax 3 の設定（2026-10 に MathJax 2 から移した）。読み込む前に置く
+        window.MathJax = {
+            tex: {
+                tags: "ams",
+                inlineMath: [["$", "$"], ["\\(", "\\)"]]
+            }
+        };
     </script>
-    <script src="/vendor/mathjax2/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script src="/vendor/mathjax3/es5/tex-mml-chtml.js"></script>
     <link href="/css/unbiased-variance.css" rel="stylesheet" type="text/css" />
 </head>
 
