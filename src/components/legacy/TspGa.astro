@@ -1,0 +1,53 @@
+---
+// 2023年の作品をそのまま動かす。JS と CSS は public/ に置いたものを、Jekyll 時代と同じ URL で読む。
+// script は is:inline にして、Astro に束ねさせない（要素の後ろで、書いた順に実行させるため）
+---
+
+<link rel="stylesheet" href="/css/tsp-ga.css" />
+<div class="tsp-ga">
+  <button id="start-button">Start</button>
+  <button id="stop-button">Stop</button>
+  <br />
+  <label for="generation">Generation</label>
+  <input type="number" id="generation" min="0" disabled />
+  <br />
+  <label for="show-environment-settings">Environment Settings</label>
+  <input type="checkbox" id="show-environment-settings" />
+  <br />
+
+  <div id="environment-settings">
+    <label for="concentric-circles">Concentric Circles</label>
+    <input type="checkbox" id="concentric-circles" />
+    <label for="node-num">Node Num</label>
+    <input type="number" id="node-num" min="3" max="1000" value="500" />
+    <label for="radius-ratio">Radius Ratio</label>
+    <input type="number" id="radius-ratio" min="0.01" max="0.99" value="0.5" step="0.01" disabled />
+  </div>
+
+  <label for="show-ga-parameter-inputs">GA Parameters</label>
+  <input type="checkbox" id="show-ga-parameter-inputs" />
+
+  <div id="ga-parameter-inputs">
+    <label for="pop-size">Population</label>
+    <input type="number" id="pop-size" min="10" max="1000" value="100" />
+    <label for="mutation-rate">Mutation Rate</label>
+    <input type="number" id="mutation-rate" min="0" max="1" value="0.25" step="0.01" />
+    <label for="tournament-size">Tournament Size</label>
+    <input type="number" id="tournament-size" min="2" max="10" value="3" />
+    <label for="elitism">Elitism</label>
+    <input type="checkbox" id="elitism" />
+  </div>
+
+  <canvas id="path" width="600" height="600"></canvas>
+  <canvas id="graph"></canvas>
+</div>
+<script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script is:inline src="/scripts/tsp-ga.js"></script>
+
+<style>
+  /* 記事の幅に収める（元は 600px 固定で、狭い画面ではみ出していた） */
+  .tsp-ga canvas {
+    max-width: 100%;
+    height: auto;
+  }
+</style>

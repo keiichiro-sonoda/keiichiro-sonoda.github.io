@@ -1,0 +1,99 @@
+---
+// すべてのページの外枠。作品のページも記事もこれを使う
+import "../styles/global.css";
+import { SITE } from "../site";
+
+interface Props {
+  title?: string;
+  description?: string;
+  // 作品のページは自分で幅を決めるので、本文の幅の制限を外せるようにする
+  wide?: boolean;
+}
+const { title, description = SITE.description, wide = false } = Astro.props;
+const pageTitle = title ? `${title} | ${SITE.title}` : SITE.title;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <title>{pageTitle}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="brand" href="/">{SITE.title}</a>
+        <nav aria-label="サイト">
+          <a href="/">記事</a>
+          <a href={SITE.github}>GitHub</a>
+        </nav>
+      </div>
+    </header>
+    <main class:list={["site-main", { wide }]}>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="inner">© keiichiro-sonoda</div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-inline: 16px;
+  }
+  .site-header {
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .site-header .inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 56px;
+  }
+  .brand {
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  nav {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+  nav a:hover {
+    color: var(--ink);
+  }
+  .site-main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 16px 64px;
+  }
+  .site-main.wide {
+    max-width: none;
+    padding: 0;
+  }
+  .site-footer {
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    padding-block: 20px;
+  }
+</style>

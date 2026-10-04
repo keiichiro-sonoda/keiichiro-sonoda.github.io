@@ -1,0 +1,66 @@
+/* サイト全体の色と文字。作品ごとの見た目は各作品のフォルダに置き、ここには足さない */
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #17212c;
+  --muted: #5d6b7a;
+  --line: #d7dde4;
+  --accent: #138a7a;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c;
+    --panel: #17202a;
+    --ink: #e6edf3;
+    --muted: #93a3b4;
+    --line: #2c3946;
+    --accent: #3cc7b0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c;
+  --panel: #17202a;
+  --ink: #e6edf3;
+  --muted: #93a3b4;
+  --line: #2c3946;
+  --accent: #3cc7b0;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a {
+  color: var(--accent);
+}
+img {
+  max-width: 100%;
+}
+[hidden] {
+  display: none !important;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+code {
+  font-family: var(--f-mono);
+  font-size: 0.92em;
+}

@@ -1,0 +1,68 @@
+---
+import Base from "../layouts/Base.astro";
+import { listPosts, postUrl, formatDate } from "../lib/posts";
+import { SITE } from "../site";
+
+const posts = await listPosts();
+---
+
+<Base>
+  <h1>{SITE.title}</h1>
+  <p class="lede">{SITE.description}</p>
+  <ul class="posts">
+    {
+      posts.map((p) => (
+        <li>
+          <a href={postUrl(p)}>
+            <time datetime={p.data.date.toISOString()}>{formatDate(p.data.date)}</time>
+            <span class="title">{p.data.title}</span>
+            {p.data.description && <span class="desc">{p.data.description}</span>}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
+
+<style>
+  h1 {
+    margin: 0;
+    font-size: 28px;
+  }
+  .lede {
+    color: var(--muted);
+    margin: 4px 0 28px;
+  }
+  .posts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .posts a {
+    display: grid;
+    gap: 2px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .posts a:hover {
+    border-color: var(--accent);
+  }
+  time {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .title {
+    font-weight: 700;
+  }
+  .desc {
+    font-size: 14px;
+    color: var(--muted);
+  }
+</style>

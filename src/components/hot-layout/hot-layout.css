@@ -1,0 +1,108 @@
+/* 関数の置き場所ラボの見た目。すべて .hl の中に閉じ込め、サイトのほかのページに漏らさない */
+.hl {
+  --bg: #eef2f5;
+  --panel: #ffffff;
+  --ink: #17212c;
+  --muted: #5d6b7a;
+  --grid: #b4c0cc;
+  --cold: #7f97b8;
+  --cold-ink: #ffffff;
+  --hot: #e2552f;
+  --hot-ink: #ffffff;
+  --loop: #ffd166;
+  --fix: #138a7a;
+  --warn: #c2410c;
+  --line-a: rgba(19, 138, 122, 0.1);
+  --f-display: "DotGothic16", "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  display: grid;
+  gap: 22px;
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hl {
+    --bg: #0f151c; --panel: #17202a; --ink: #e6edf3; --muted: #93a3b4; --grid: #3a4858;
+    --cold: #4b6386; --cold-ink: #e6edf3; --hot: #ff6b45; --hot-ink: #1a0d08; --loop: #ffd166;
+    --fix: #3cc7b0; --warn: #fb923c; --line-a: rgba(60, 199, 176, 0.12);
+  }
+}
+:root[data-theme="dark"] .hl {
+  --bg: #0f151c; --panel: #17202a; --ink: #e6edf3; --muted: #93a3b4; --grid: #3a4858;
+  --cold: #4b6386; --cold-ink: #e6edf3; --hot: #ff6b45; --hot-ink: #1a0d08; --loop: #ffd166;
+  --fix: #3cc7b0; --warn: #fb923c; --line-a: rgba(60, 199, 176, 0.12);
+}
+.hl a { color: var(--fix); }
+.hl button:focus-visible, .hl input:focus-visible, .hl a:focus-visible { outline: 2px solid var(--fix); outline-offset: 2px; }
+
+/* 帯 */
+.hl .lab { background: var(--panel); border-radius: 14px; padding: 16px; display: grid; gap: 12px; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(20,40,60,.06); }
+.hl .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.hl .seg { display: inline-flex; border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; }
+.hl .seg button { font: inherit; font-size: 13px; padding: 6px 14px; background: transparent; color: var(--ink); border: 0; cursor: pointer; }
+.hl .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.hl .slider { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.hl .slider input { width: 160px; accent-color: var(--hot); }
+.hl .slider output { font-family: var(--f-mono); color: var(--ink); min-width: 5.5em; }
+.hl .svgbox { overflow-x: auto; }
+.hl svg { display: block; width: 100%; min-width: 600px; height: auto; }
+.hl svg text { font-family: var(--f-mono); }
+.hl .band { fill: var(--line-a); stroke: var(--fix); stroke-width: 1.2; }
+.hl .hotbr path { fill: none; stroke: var(--hot); stroke-width: 1.5; }
+.hl .hotbr text { fill: var(--hot); }
+.hl .fn { transition: transform .7s cubic-bezier(.3,.7,.2,1); }
+.hl .fnrect { transition: width .7s cubic-bezier(.3,.7,.2,1); }
+.hl .fnrect.hot { fill: var(--hot); }
+.hl .fnrect.cold { fill: var(--cold); }
+.hl .ink-hot { fill: var(--hot-ink); }
+.hl .ink-cold { fill: var(--cold-ink); }
+.hl .loop { fill: var(--loop); }
+.hl .loop-ink { fill: #3a2a00; }
+.hl .grid line { stroke: var(--ink); stroke-opacity: .45; stroke-width: 1; stroke-dasharray: 3 3; }
+.hl .grid text { fill: var(--muted); }
+.hl .cross line { stroke: var(--warn); stroke-width: 3; }
+.hl .cross text { fill: var(--warn); }
+.hl .padlabel { fill: var(--muted); }
+.hl .readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.hl .ro { border: 1px solid var(--grid); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.hl .ro .name { font-size: 13px; color: var(--muted); }
+.hl .ro .name code { font-family: var(--f-mono); font-size: 12px; }
+.hl .ro .val { font-size: 15px; }
+.hl .ro .val b { font-family: var(--f-mono); font-size: 18px; }
+.hl .ro.bad .val b { color: var(--warn); }
+.hl .ro.good .val b { color: var(--fix); }
+.hl .chips { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 13px; }
+.hl .chip { display: inline-flex; align-items: center; gap: 6px; }
+.hl .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.hl .sw.hot { background: var(--hot); }
+.hl .sw.cold { background: var(--cold); }
+.hl .sw.loop { background: var(--loop); }
+.hl .sw.band { background: var(--line-a); border: 1px solid var(--fix); }
+
+/* 段階の説明 */
+.hl .story { background: var(--panel); border-radius: 14px; padding: 18px; display: grid; gap: 14px; }
+.hl .steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.hl .steps button { font-family: var(--f-mono); font-size: 13px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--grid); background: transparent; color: var(--ink); cursor: pointer; }
+.hl .steps button[aria-current="step"] { background: var(--hot); border-color: var(--hot); color: var(--hot-ink); }
+.hl .scene h2 { font-family: var(--f-display); font-weight: 400; font-size: clamp(20px, 3.6vw, 26px); margin: 0 0 6px; line-height: 1.4; text-wrap: balance; }
+.hl .scene p { margin: 0 0 10px; max-width: 64ch; }
+.hl .scene .big { font-family: var(--f-mono); font-size: clamp(22px, 5vw, 34px); color: var(--warn); }
+.hl .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+.hl .nav button { font: inherit; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; }
+.hl .nav button.primary { background: var(--ink); color: var(--panel); }
+.hl .nav button:disabled { opacity: .35; cursor: default; }
+.hl table { border-collapse: collapse; font-family: var(--f-mono); font-size: 13px; width: 100%; }
+.hl th, .hl td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+.hl th:first-child, .hl td:first-child { text-align: left; }
+.hl th { font-family: var(--f-body); font-weight: 700; color: var(--muted); font-size: 12px; }
+.hl td.moved { color: var(--warn); }
+.hl td.same { color: var(--fix); }
+.hl .tablebox { overflow-x: auto; }
+.hl .note { font-size: 13px; color: var(--muted); max-width: 70ch; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl .fn, .hl .fnrect { transition: none; }
+}

@@ -1,0 +1,52 @@
+---
+import Base from "./Base.astro";
+import { formatDate } from "../lib/posts";
+
+interface Props {
+  title: string;
+  date: Date;
+  description?: string;
+}
+const { title, date, description } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <article>
+    <header>
+      <time datetime={date.toISOString()}>{formatDate(date)}</time>
+      <h1>{title}</h1>
+    </header>
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+</Base>
+
+<style>
+  header {
+    margin-bottom: 24px;
+  }
+  time {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  h1 {
+    font-size: clamp(24px, 4.5vw, 32px);
+    line-height: 1.4;
+    margin: 4px 0 0;
+    text-wrap: balance;
+  }
+  .prose :global(h2) {
+    font-size: 20px;
+    margin: 2em 0 0.6em;
+  }
+  .prose :global(p) {
+    margin: 0 0 1em;
+  }
+  .prose :global(pre) {
+    overflow-x: auto;
+    padding: 12px 14px;
+    border-radius: 8px;
+  }
+</style>
