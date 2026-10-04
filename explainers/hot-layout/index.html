@@ -225,7 +225,7 @@ td.same { color: var(--fix); }
     }
     nodes[k] = { g, r };
   }
-  const padLabel = el("text", { x: 0, y: 110, "font-size": 9, "text-anchor": "end", fill: "var(--cold-ink)" });
+  const padLabel = el("text", { x: 0, y: 40, "font-size": 9.5, fill: "var(--muted)" });  // 箱の上の空きに出す（箱の中だと狭くて切れる）
 
   const ro = document.getElementById("readouts");
   function render() {
@@ -234,8 +234,8 @@ td.same { color: var(--fix); }
       nodes[k].g.style.transform = `translate(${X0 + pos[k] * SC}px, 0px)`;
       if (k === "show") nodes[k].r.setAttribute("width", (F.show.size + state.pad) * SC - 2);
     }
-    padLabel.setAttribute("x", X0 + (pos.show + F.show.size + state.pad) * SC - 7);
-    padLabel.textContent = state.pad ? `+${state.pad} バイト伸びた` : "";
+    padLabel.setAttribute("x", X0 + pos.show * SC + 2);
+    padLabel.textContent = state.pad ? `showBoard が +${state.pad} バイト伸びた` : "";
     while (gMarks.firstChild) gMarks.removeChild(gMarks.firstChild);
     const used = new Set();
     let html = "";
