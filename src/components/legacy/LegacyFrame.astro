@@ -40,6 +40,8 @@ const { src, title } = Astro.props;
     display: block;
     width: 100%;
     min-height: 320px;
+    /* 高さは中身の scrollHeight を入れる。border-box だと枠線の 2px 分足りずにスクロールバーが出る */
+    box-sizing: content-box;
     border: 1px solid var(--line);
     border-radius: 8px;
     /* 古い作品は明るい背景を前提にしているので、ダークモードでも白地で見せる */

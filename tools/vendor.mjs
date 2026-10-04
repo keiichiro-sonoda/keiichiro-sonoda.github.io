@@ -6,7 +6,7 @@
 //
 // public/vendor/ は生成物なので git に入れない（.gitignore）。足すときは下の表に1行足し、
 // ページからは /vendor/<名前>/... で読む。要らないファイルまで写さない（MathJax は丸ごとだと 70MB を超える）。
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,12 +29,29 @@ const VENDOR = [
       "jax/input",
       "jax/element",
       "jax/output/CommonHTML",
+      // 設定 TeX-MML-AM_CHTML が fast-preview のために読みに来る（無いと 404 が出る）
+      "jax/output/PreviewHTML",
       "extensions",
       "localization",
       "fonts/HTML-CSS/TeX/woff",
     ],
   ],
 ];
+
+// 表と版が前回と同じなら何もしない。npm run dev の最中に build を走らせたとき、写し直すと
+// dev サーバ（Vite）が覚えている public/ の一覧が古くなり、/vendor/ の一部が 404 になるため
+const stamp = JSON.stringify(
+  VENDOR.map(([name, pkg, paths]) => [
+    name,
+    JSON.parse(readFileSync(join(root, "node_modules", pkg, "package.json"), "utf8")).version,
+    paths,
+  ]),
+);
+const stampFile = join(out, ".stamp");
+if (existsSync(stampFile) && readFileSync(stampFile, "utf8") === stamp) {
+  console.log("vendor: public/vendor/ は最新");
+  process.exit(0);
+}
 
 rmSync(out, { recursive: true, force: true });
 for (const [name, pkg, paths] of VENDOR) {
@@ -49,4 +66,5 @@ for (const [name, pkg, paths] of VENDOR) {
     cpSync(src, dst, { recursive: true });
   }
 }
+writeFileSync(stampFile, stamp);
 console.log(`vendor: ${VENDOR.map(([n]) => n).join(", ")} を public/vendor/ に写した`);
