@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="関数の置き場所が速さを変える仕組みと、どうぶつしょうぎ完全解析RTAの記録 #33 がそれを固定する方法を、動くメモリの帯で説明する図解。">
+<title>関数の置き場所ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+html, body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+/* 構成: 上に1枚の「メモリの帯」ラボを固定し、下の段階ボタンで同じ帯を動かしながら話を進める */
+:root {
+  --bg: #eef2f5;
+  --panel: #ffffff;
+  --ink: #17212c;
+  --muted: #5d6b7a;
+  --grid: #b4c0cc;
+  --cold: #7f97b8;
+  --cold-ink: #ffffff;
+  --hot: #e2552f;
+  --hot-ink: #ffffff;
+  --loop: #ffd166;
+  --fix: #138a7a;
+  --warn: #c2410c;
+  --line-a: rgba(19,138,122,.10);
+  --f-display: "DotGothic16", "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --panel: #17202a; --ink: #e6edf3; --muted: #93a3b4; --grid: #3a4858;
+    --cold: #4b6386; --cold-ink: #e6edf3; --hot: #ff6b45; --hot-ink: #1a0d08; --loop: #ffd166;
+    --fix: #3cc7b0; --warn: #fb923c; --line-a: rgba(60,199,176,.12); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --panel: #17202a; --ink: #e6edf3; --muted: #93a3b4; --grid: #3a4858;
+  --cold: #4b6386; --cold-ink: #e6edf3; --hot: #ff6b45; --hot-ink: #1a0d08; --loop: #ffd166;
+  --fix: #3cc7b0; --warn: #fb923c; --line-a: rgba(60,199,176,.12); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.75; }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 22px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+.lab { background: var(--panel); border-radius: 14px; padding: 16px; display: grid; gap: 12px; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(20,40,60,.06); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; padding: 6px 14px; background: transparent; color: var(--ink); border: 0; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.slider { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.slider input { width: 160px; accent-color: var(--hot); }
+.slider output { font-family: var(--f-mono); color: var(--ink); min-width: 5.5em; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--fix); outline-offset: 2px; }
+.svgbox { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 600px; height: auto; }
+svg text { font-family: var(--f-mono); }
+.fn { transition: transform .7s cubic-bezier(.3,.7,.2,1); }
+.fnrect { transition: width .7s cubic-bezier(.3,.7,.2,1); }
+.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.ro { border: 1px solid var(--grid); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.ro .name { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.ro .val { font-size: 15px; }
+.ro .val b { font-family: var(--f-mono); font-size: 18px; }
+.ro.bad .val b { color: var(--warn); }
+.ro.good .val b { color: var(--fix); }
+.story { background: var(--panel); border-radius: 14px; padding: 18px; display: grid; gap: 14px; }
+.steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.steps button { font-family: var(--f-mono); font-size: 13px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--grid); background: transparent; color: var(--ink); cursor: pointer; }
+.steps button[aria-current="step"] { background: var(--hot); border-color: var(--hot); color: var(--hot-ink); }
+.scene h2 { font-family: var(--f-display); font-weight: 400; font-size: clamp(20px, 3.6vw, 26px); margin: 0 0 6px; line-height: 1.4; text-wrap: balance; }
+.scene p { margin: 0 0 10px; max-width: 64ch; }
+.scene .big { font-family: var(--f-mono); font-size: clamp(22px, 5vw, 34px); color: var(--warn); }
+.nav { display: flex; gap: 10px; flex-wrap: wrap; }
+.nav button { font: inherit; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; }
+.nav button.primary { background: var(--ink); color: var(--panel); }
+.nav button:disabled { opacity: .35; cursor: default; }
+table { border-collapse: collapse; font-family: var(--f-mono); font-size: 13px; width: 100%; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-family: var(--f-body); font-weight: 700; color: var(--muted); font-size: 12px; }
+td.moved { color: var(--warn); }
+td.same { color: var(--fix); }
+.tablebox { overflow-x: auto; }
+.note { font-size: 13px; color: var(--muted); max-width: 70ch; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+@media (prefers-reduced-motion: reduce) { .fn, .fnrect { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><a href="/" style="color:inherit">keiichiro-sonoda.github.io</a> ／ <a href="https://github.com/keiichiro-sonoda/dobutsu-shogi-rta" style="color:inherit">dobutsu-shogi-rta</a> 記録 #33 の図解</div>
+    <h1>同じ命令なのに、なぜ遅くなる？</h1>
+    <p class="lede">関数の「置き場所」が速さを変える仕組みと、#33 でそれをどう止めるかを、メモリの帯を動かしながら説明します。下の番号を順に押すか、帯の上のつまみを自分で動かしてください。</p>
+  </header>
+
+  <section class="lab" aria-label="メモリの帯">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="配置">
+        <button id="lay-old" aria-pressed="true">いまの配置（#32）</button>
+        <button id="lay-new" aria-pressed="false">#33 の配置</button>
+      </div>
+      <label class="slider" for="pad">前の関数を伸ばす
+        <input id="pad" type="range" min="0" max="64" step="1" value="0">
+        <output id="pad-out" for="pad">+0 バイト</output>
+      </label>
+    </div>
+    <div class="svgbox"><svg id="tape" viewBox="0 0 560 190" role="img" aria-label="64バイトごとに区切られたメモリと、その上に並ぶ関数"></svg></div>
+    <div class="readouts" id="readouts"></div>
+    <div class="chips" aria-hidden="true">
+      <span class="chip"><span class="sw" style="background:var(--hot)"></span>熱い関数（時間の大半を使う）</span>
+      <span class="chip"><span class="sw" style="background:var(--cold)"></span>ほかの関数</span>
+      <span class="chip"><span class="sw" style="background:var(--loop)"></span>何億回も回るループ</span>
+      <span class="chip"><span class="sw" style="background:var(--line-a);border:1px solid var(--fix)"></span>CPU が1回に読む64バイト</span>
+    </div>
+  </section>
+
+  <section class="story" aria-live="polite">
+    <nav class="steps" id="steps" aria-label="段階"></nav>
+    <div class="scene" id="scene"></div>
+    <div class="nav">
+      <button id="prev">← 前へ</button>
+      <button id="next" class="primary">次へ →</button>
+      <button id="play">▶ ずれを動かす</button>
+    </div>
+  </section>
+
+  <p class="note">図は仕組みを見せるための模型です。関数の大きさや番地は実物の値ではありません。実際の CPU では、64バイトの区切りのほかに、解読済み命令の置き場や分岐予測の表も番地の影響を受けます。数字（+0.63 秒など）は記録 #32 の門番の実測です。</p>
+</div>
+
+<script>
+(() => {
+  const LINE = 64, X0 = 24, SC = 1.0;       // 1バイト = 1単位
+  const BASE = 0x1000;                      // 番地の見た目の起点
+  // 模型の関数。loop は関数の先頭からの位置と長さ
+  const F = {
+    show: { label: "showBoard", size: 70, hot: false },
+    inv:  { label: "nextBoardInvNormal", size: 120, hot: true, loop: [12, 40], short: "生成器のループ" },
+    huge: { label: "hugeAlloc", size: 50, hot: false },
+    succ: { label: "buildSuccRange", size: 100, hot: true, loop: [40, 40], short: "P2 のループ" },
+  };
+  const state = { layout: "old", pad: 0 };
+  const svg = document.getElementById("tape");
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (n, a = {}, p = svg) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
+
+  function layout(lay, pad) {
+    const pos = {};
+    if (lay === "old") {
+      let x = 0;
+      for (const k of ["show", "inv", "huge", "succ"]) { pos[k] = x; x += F[k].size + (k === "show" ? pad : 0); }
+    } else {
+      // 熱い区画を先頭に。熱い関数は64バイトの区切りに揃える
+      const up = v => Math.ceil(v / LINE) * LINE;
+      pos.inv = 0;
+      pos.succ = up(pos.inv + F.inv.size);
+      const hotEnd = up(pos.succ + F.succ.size);
+      pos.show = hotEnd;
+      pos.huge = pos.show + F.show.size + pad;
+    }
+    return pos;
+  }
+  const linesOf = (s, len) => { const a = Math.floor(s / LINE), b = Math.floor((s + len - 1) / LINE); return [a, b]; };
+
+  // 静的な部分
+  el("rect", { x: 0, y: 0, width: 560, height: 190, fill: "transparent" });
+  const gGrid = el("g");
+  const gHotBracket = el("g");
+  const gFns = el("g");
+  const gReads = el("g");
+  for (let i = 0; i <= 8; i++) {
+    const x = X0 + i * LINE * SC;
+    el("line", { x1: x, y1: 26, x2: x, y2: 150, stroke: "var(--grid)", "stroke-dasharray": "3 3" }, gGrid);
+    el("text", { x, y: 18, "text-anchor": "middle", "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = (i * LINE).toString();
+  }
+  el("text", { x: X0 + 8 * LINE + 6, y: 18, "font-size": 10, fill: "var(--muted)" }, gGrid).textContent = "B";
+  const readBands = [];
+  for (let i = 0; i < 8; i++) {
+    readBands.push(el("rect", { x: X0 + i * LINE, y: 30, width: LINE, height: 112, fill: "var(--line-a)", stroke: "var(--fix)", "stroke-width": 1.2, opacity: 0, rx: 2 }, gReads));
+  }
+  const hotBr = el("path", { d: "", fill: "none", stroke: "var(--hot)", "stroke-width": 1.5 }, gHotBracket);
+  const hotBrT = el("text", { x: 0, y: 166, "font-size": 10, fill: "var(--hot)" }, gHotBracket);
+
+  const nodes = {};
+  for (const k in F) {
+    const f = F[k];
+    const g = el("g", { class: "fn" }, gFns);
+    const r = el("rect", { class: "fnrect", x: 0, y: 46, width: f.size * SC - 2, height: 70, rx: 5, fill: f.hot ? "var(--hot)" : "var(--cold)" }, g);
+    const t = el("text", { x: 6, y: 62, "font-size": 9.5, fill: f.hot ? "var(--hot-ink)" : "var(--cold-ink)" }, g);
+    t.textContent = f.label.length * 5.8 > f.size ? f.label.slice(0, Math.floor(f.size / 6)) + "…" : f.label;
+    let lr = null;
+    if (f.loop) {
+      lr = el("rect", { x: f.loop[0], y: 82, width: f.loop[1], height: 26, rx: 3, fill: "var(--loop)" }, g);
+      el("text", { x: f.loop[0] + f.loop[1] / 2, y: 99, "text-anchor": "middle", "font-size": 9, fill: "#3a2a00" }, g).textContent = "ループ";
+    }
+    nodes[k] = { g, r };
+  }
+  const padLabel = el("text", { x: 0, y: 132, "font-size": 9, fill: "var(--muted)" });
+
+  const ro = document.getElementById("readouts");
+  function render() {
+    const pos = layout(state.layout, state.pad);
+    for (const k in F) {
+      const x = X0 + pos[k] * SC;
+      nodes[k].g.style.transform = `translate(${x}px, 0px)`;
+      if (k === "show") nodes[k].r.setAttribute("width", (F.show.size + state.pad) * SC - 2);
+    }
+    padLabel.setAttribute("x", X0 + (pos.show + F.show.size) * SC + 2);
+    padLabel.textContent = state.pad ? `伸びた分 +${state.pad}` : "";
+    // 熱いループが触る64バイトの区切り
+    const used = new Set();
+    let html = "";
+    for (const k of ["inv", "succ"]) {
+      const f = F[k];
+      const s = pos[k] + f.loop[0];
+      const [a, b] = linesOf(s, f.loop[1]);
+      for (let i = a; i <= b; i++) used.add(i);
+      const n = b - a + 1;
+      html += `<div class="ro ${n > 1 ? "bad" : "good"}"><span class="name">${f.label}（${f.short}）</span>` +
+              `<span class="val">番地 <b>0x${(BASE + pos[k]).toString(16)}</b></span>` +
+              `<span class="val">1周ごとに読む区切り <b>${n}</b> 回${n > 1 ? "（区切りをまたいでいる）" : ""}</span></div>`;
+    }
+    ro.innerHTML = html;
+    readBands.forEach((r, i) => r.setAttribute("opacity", used.has(i) ? 1 : 0));
+    if (state.layout === "new") {
+      const x1 = X0, x2 = X0 + (Math.ceil((pos.succ + F.succ.size) / LINE) * LINE) * SC;
+      hotBr.setAttribute("d", `M${x1} 154 v4 H${x2} v-4`);
+      hotBrT.setAttribute("x", x1); hotBrT.textContent = "熱い区画（先頭に固定、64バイトに揃える）";
+    } else { hotBr.setAttribute("d", ""); hotBrT.textContent = ""; }
+    document.getElementById("pad").value = state.pad;
+    document.getElementById("pad-out").value = `+${state.pad} バイト`;
+    document.getElementById("lay-old").setAttribute("aria-pressed", state.layout === "old");
+    document.getElementById("lay-new").setAttribute("aria-pressed", state.layout === "new");
+  }
+
+  // 番地の表（段階7）
+  function addrTable() {
+    const pads = [0, 8, 24, 40, 100];
+    let rows = "";
+    for (const k of ["inv", "succ"]) {
+      const o0 = layout("old", 0)[k], n0 = layout("new", 0)[k];
+      rows += `<tr><td>${F[k].label}</td>` + pads.map(p => {
+        const o = layout("old", p)[k];
+        return `<td class="${o === o0 ? "same" : "moved"}">0x${(BASE + o).toString(16)}</td>`;
+      }).join("") + `<td class="same">0x${(BASE + n0).toString(16)}</td></tr>`;
+    }
+    return `<div class="tablebox"><table><thead><tr><th>熱い関数</th>${pads.map(p => `<th>いまの配置<br>詰め物 ${p}B</th>`).join("")}<th>#33 の配置<br>詰め物いくつでも</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // 物語。各段階が帯の状態を決める
+  let sweep = null;
+  const stopSweep = () => { if (sweep) { clearInterval(sweep); sweep = null; } document.getElementById("play").textContent = "▶ ずれを動かす"; };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function startSweep() {
+    stopSweep();
+    if (reduce) { state.pad = 24; render(); return; }
+    let p = 0, dir = 1;
+    sweep = setInterval(() => { p += dir * 2; if (p >= 64 || p <= 0) dir = -dir; state.pad = p; render(); }, 90);
+    document.getElementById("play").textContent = "■ 止める";
+  }
+
+  const S = [
+    { layout: "old", pad: 0, h: "同じ命令なのに、0.63秒遅くなった",
+      b: `<p><span class="big">P2 +0.63 秒</span>（区間 +0.35〜+0.90）</p>
+          <p>記録 #32 の門番で起きたことです。#32 は全探索（F1）のための小さな変更で、後退解析の P2 が実行する命令は<b>1つも変わっていません</b>。それでも P2 は0.6秒遅くなりました。</p>
+          <p>変わったのは、関数がメモリのどこに置かれたか、だけでした。</p>` },
+    { layout: "old", pad: 0, h: "関数は、書いた順に一列に並ぶ",
+      b: `<p>C のファイルをコンパイルすると、関数はおおむね書いた順に、メモリの上に一列に並びます。上の帯がそれです。目盛りはバイト単位の番地です。</p>
+          <p>オレンジ色が<b>熱い関数</b>で、実行時間の大半を使っています。黄色の部分は、その中で何億回も回るループです。</p>` },
+    { layout: "old", pad: 24, h: "前の関数が伸びると、後ろが全部ずれる",
+      b: `<p>前のほうの関数（ここでは <code>showBoard</code>）を少し書き換えて24バイト長くしました。<b>中身を触っていない後ろの関数まで、全部が同じだけ後ろにずれます。</b></p>
+          <p>上のつまみを動かして、ずれ方を確かめてみてください。</p>` },
+    { layout: "old", pad: 0, h: "CPU は、64バイトずつ区切って読む",
+      b: `<p>CPU は命令を1バイトずつではなく、<b>64バイトの区切りごと</b>にまとめて読み込みます。帯の点線が区切りで、緑の枠が、熱いループを回すために読む区切りです。</p>
+          <p>いまは2つのループとも、1つの区切りの中に収まっています。1周ごとに1回読めば済みます。</p>` },
+    { layout: "old", pad: 40, sweep: true, h: "ずれ方しだいで、区切りをまたぐ",
+      b: `<p>前の関数を40バイト伸ばすと、生成器のループが区切りをまたぎ、<b>1周ごとに2回</b>読むことになります（P2 のループは1回のまま）。伸ばす量が6バイトか7バイトかの違いだけでも、またぐかどうかが変わります。何億回も回るループなので、その差が積み上がります。</p>
+          <p>「▶ ずれを動かす」を押すと、ずれに応じて、どちらのループがまたぐかが入れ替わるのが見えます。<b>どれが得をしてどれが損をするかは、ずれ方しだいで予測できません。</b>これが #32 で P2 が動いた理由と読んでいる仕組みです。</p>` },
+    { layout: "new", pad: 0, sweep: true, h: "#33：熱い関数を先頭にまとめ、区切りに揃える",
+      b: `<p>#33 では、熱い関数を<b>専用の区画にまとめて先頭に置き</b>、それぞれの先頭を<b>64バイトの区切りに揃えます</b>。ほかの関数はその後ろに回します。</p>
+          <p>この状態でつまみを動かしても、ずれるのは後ろのほかの関数だけで、熱い関数は1バイトも動きません。</p>
+          <p>⚠️ 揃えても、生成器のループはまたがず、P2 のループはまたいだままです。<b>#33 が固定するのは速さではなく「ぶれ」</b>です。だから門番では、速くなる向きも遅くなる向きも予測しません。</p>` },
+    { layout: "new", pad: 24, h: "確かめ方：詰め物の検査",
+      b: `<p>効いているかどうかは、時間を測る前に<b>番地で</b>確かめられます。熱くない場所に大きさの違う詰め物を足した版をいくつかビルドし、熱い関数の番地を比べます。</p>
+          <div id="addr"></div>
+          <p class="note">この表は上の模型で計算した値です。実際の検査では、ビルドした <code>.so</code> を <code>nm</code> で読んで比べ、テストに固定します。</p>` },
+    { layout: "new", pad: 0, h: "固定できる範囲と、できない範囲",
+      b: `<p><b>ほかの関数を変えたとき</b>：熱い関数は1バイトも動かない。#33 はこれを保証します。以後の門番で出る差は、変えたコードの効果だけになります。</p>
+          <p><b>熱い関数そのものを変えたとき</b>：後ろの熱い関数はずれます。ただし区切りに揃えてあるので、ずれは64バイト単位になり、区切りとの位置関係は保たれます。解読済み命令の置き場や分岐予測の表の当たり方までは保証できません。</p>
+          <p>残っている改善は1つあたり1秒前後かそれ以下です。置き場所のぶれ（±0.5秒前後）を止めておかないと、効いたのかどうかを見分けられません。</p>` },
+  ];
+  let cur = 0;
+  const stepsNav = document.getElementById("steps");
+  S.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.textContent = i + 1; b.title = s.h; b.setAttribute("aria-label", `${i + 1}: ${s.h}`);
+    b.addEventListener("click", () => go(i));
+    stepsNav.appendChild(b);
+  });
+  function go(i) {
+    stopSweep();
+    cur = Math.max(0, Math.min(S.length - 1, i));
+    const s = S[cur];
+    state.layout = s.layout; state.pad = s.pad; render();
+    document.getElementById("scene").innerHTML = `<h2>${s.h}</h2>${s.b}`;
+    const a = document.getElementById("addr"); if (a) a.innerHTML = addrTable();
+    [...stepsNav.children].forEach((b, j) => j === cur ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current"));
+    document.getElementById("prev").disabled = cur === 0;
+    document.getElementById("next").disabled = cur === S.length - 1;
+  }
+  document.getElementById("prev").addEventListener("click", () => go(cur - 1));
+  document.getElementById("next").addEventListener("click", () => go(cur + 1));
+  document.getElementById("play").addEventListener("click", () => sweep ? stopSweep() : startSweep());
+  document.getElementById("pad").addEventListener("input", e => { stopSweep(); state.pad = +e.target.value; render(); });
+  document.getElementById("lay-old").addEventListener("click", () => { state.layout = "old"; render(); });
+  document.getElementById("lay-new").addEventListener("click", () => { state.layout = "new"; render(); });
+  go(0);
+})();
+</script>
+</body>
+</html>
