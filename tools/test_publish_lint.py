@@ -116,6 +116,16 @@ class PublishLintTest(unittest.TestCase):
         self.assertIn("about.md", p.stderr)
         self.assertNotIn("メッセージ", p.stderr)
 
+    def test_loopback_passes_but_other_ip_stops(self) -> None:
+        self.r.write("guide.md", "ローカルで " + ".".join(["127", "0", "0", "1"]) + ":4000 を開く\n")
+        self.r.commit("手順")
+        self.assertCode(self.r.lint("--base", "base"), 0)
+        self.r.write("net.md", "家の機械は " + ".".join(["192", "0", "2", "10"]) + "\n")
+        self.r.commit("足す")
+        p = self.r.lint("--base", "base")
+        self.assertCode(p, 1)
+        self.assertIn("net.md", p.stderr)
+
     def test_deny_word_in_file_and_message_stops(self) -> None:
         self.r.write("post.md", f"{WORD}で動かした\n")
         self.r.commit(f"{WORD}で確かめた")

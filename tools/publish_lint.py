@@ -196,8 +196,12 @@ def check_text(where: str, text: str, words: list[str], in_message: bool) -> lis
         for name, rx in (USER_PATH, EMAIL, IPV4):
             if name == EMAIL[0] and in_message and TRAILER.match(text):
                 continue
-            if m := rx.search(text):
+            for m in rx.finditer(text):
+                # 自分自身を指すアドレス（ローカルで確かめる手順など）は誰も特定しない
+                if name == IPV4[0] and (m.group(0).startswith("127.") or m.group(0) == "0.0.0.0"):
+                    continue
                 found.append(("S2", where, f"{name}: {mask(m.group(0))}"))
+                break
     low = text.lower()
     for w in words:
         if w.lower() in low:
