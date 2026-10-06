@@ -8,7 +8,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       // 画面に依存しない部分だけを測る。画面（.tsx）と Worker の入口は e2e で確かめる
-      include: ["src/components/tsp/engine/**/*.ts", "src/components/tsp/runner.ts"],
+      include: ["src/components/tsp/engine/**/*.ts", "src/components/tsp/runner.ts", "src/components/tsp/numberInput.ts"],
       exclude: ["**/*.test.ts"],
       reporter: ["text", "html"],
       reportsDirectory: "coverage",

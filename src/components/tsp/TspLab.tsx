@@ -1,10 +1,11 @@
 // 巡回セールスマン問題を遺伝的アルゴリズムで解く実験台。計算は Worker、ここは表示と操作だけ
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import ConvergenceChart from "./ConvergenceChart";
 import RouteCanvas from "./RouteCanvas";
 import { DEFAULT_PARAMS, PARAM_LIMITS, type GaParams } from "./engine/ga";
 import { LAYOUTS, circleOptimum, generatePoints, type Layout } from "./engine/points";
 import { createRng, newSeed } from "./engine/rng";
+import { commitDraft, nudge, type NumberSpec } from "./numberInput";
 import { useTspWorker } from "./useTspWorker";
 import "./tsp.css";
 
@@ -75,7 +76,12 @@ export default function TspLab() {
           <div className="tsp-stats">
             <Stat label="世代" value={snapshot ? snapshot.generation.toLocaleString() : "—"} testId="generation" />
             <Stat label="最短距離" value={best !== undefined ? best.toFixed(3) : "—"} testId="best" />
-            <Stat label="はじめから" value={snapshot ? `−${(gain * 100).toFixed(1)}%` : "—"} testId="gain" />
+            {/* 縮んでいないときに「−0.0%」と出さない */}
+            <Stat
+              label="はじめから"
+              value={snapshot ? (gain * 100 >= 0.05 ? `−${(gain * 100).toFixed(1)}%` : "0.0%") : "—"}
+              testId="gain"
+            />
             {gap !== undefined ? (
               <Stat label="理論上の最短との差" value={`+${(gap * 100).toFixed(2)}%`} testId="gap" />
             ) : (
@@ -132,8 +138,7 @@ export default function TspLab() {
               value={env.count}
               min={COUNT.min}
               max={COUNT.max}
-              step={env.layout === "concentric" ? 2 : 1}
-              format={(v) => `${v}`}
+              step={1}
               onChange={(v) => updateEnv({ count: v })}
               testId="count"
             />
@@ -143,27 +148,24 @@ export default function TspLab() {
                 value={env.innerRatio}
                 min={0.1}
                 max={0.9}
-                step={0.05}
-                format={(v) => `${Math.round(v * 100)}%`}
+                step={0.01}
+                scale={100}
+                unit="%"
+                input={{ min: 10, max: 90, step: 1 }}
                 onChange={(v) => updateEnv({ innerRatio: v })}
                 testId="inner"
               />
             )}
-            <label className="tsp-field">
+            <div className="tsp-field tsp-field-wide">
               <span>シード</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={4294967295}
+              <NumberBox
+                label="シード"
                 value={env.seed}
-                data-testid="seed"
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isInteger(v) && v >= 0 && v < 2 ** 32) updateEnv({ seed: v });
-                }}
+                spec={{ min: 0, max: 2 ** 32 - 1, step: 1 }}
+                onCommit={(v) => updateEnv({ seed: v })}
+                testId="seed"
               />
-            </label>
+            </div>
           </Group>
 
           <Group title="遺伝的アルゴリズム" note="動かしたままでも変えられます">
@@ -172,8 +174,8 @@ export default function TspLab() {
               value={params.populationSize}
               min={PARAM_LIMITS.populationSize.min}
               max={500}
-              step={10}
-              format={(v) => `${v}`}
+              step={1}
+              input={{ min: PARAM_LIMITS.populationSize.min, max: PARAM_LIMITS.populationSize.max, step: 1 }}
               onChange={(v) => updateParam("populationSize", v)}
               testId="population"
             />
@@ -183,7 +185,9 @@ export default function TspLab() {
               min={0}
               max={1}
               step={0.01}
-              format={(v) => `${Math.round(v * 100)}%`}
+              scale={100}
+              unit="%"
+              input={{ min: 0, max: 100, step: 1 }}
               onChange={(v) => updateParam("mutationRate", v)}
               testId="mutation"
             />
@@ -193,7 +197,6 @@ export default function TspLab() {
               min={PARAM_LIMITS.tournamentSize.min}
               max={PARAM_LIMITS.tournamentSize.max}
               step={1}
-              format={(v) => `${v}`}
               onChange={(v) => updateParam("tournamentSize", v)}
               testId="tournament"
             />
@@ -236,19 +239,31 @@ function Group({ title, note, children }: { title: string; note: string; childre
 interface SliderProps {
   label: string;
   value: number;
+  /**
+   * スライダーの範囲と刻み（大まかに動かす用）。刻みは入力欄と同じ細かさにする
+   * （粗いと、入力欄で 33% にしてもブラウザがつまみを 35% の位置に丸めて、表示が食い違う）
+   */
   min: number;
   max: number;
   step: number;
-  format: (v: number) => string;
+  /** 表示の倍率（確率を % で見せるなら 100） */
+  scale?: number;
+  unit?: string;
+  /** 入力欄の範囲と刻み（表示の単位）。省略するとスライダーと同じ範囲・1刻み。細かく合わせる用 */
+  input?: NumberSpec;
   onChange: (v: number) => void;
   testId: string;
 }
 
-function Slider({ label, value, min, max, step, format, onChange, testId }: SliderProps) {
+/** スライダーで大まかに、隣の入力欄で細かく合わせる */
+function Slider({ label, value, min, max, step, scale = 1, unit, input, onChange, testId }: SliderProps) {
+  const id = useId();
+  const spec = input ?? { min: min * scale, max: max * scale, step: 1 };
   return (
-    <label className="tsp-field">
-      <span>{label}</span>
+    <div className="tsp-field">
+      <label htmlFor={id}>{label}</label>
       <input
+        id={id}
         type="range"
         min={min}
         max={max}
@@ -257,7 +272,66 @@ function Slider({ label, value, min, max, step, format, onChange, testId }: Slid
         data-testid={testId}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <output>{format(value)}</output>
-    </label>
+      <span className="tsp-num">
+        <NumberBox
+          label={label}
+          value={Number((value * scale).toFixed(6))}
+          spec={spec}
+          onCommit={(v) => onChange(v / scale)}
+          testId={`${testId}-input`}
+        />
+        {unit && <span className="tsp-unit">{unit}</span>}
+      </span>
+    </div>
+  );
+}
+
+interface NumberBoxProps {
+  label: string;
+  value: number;
+  spec: NumberSpec;
+  onCommit: (v: number) => void;
+  testId: string;
+}
+
+/**
+ * 数値の入力欄。打っている途中の文字は確定しない（「120」を打つ途中の「1」で都市の数を作り直さないため）。
+ * Enter かフォーカスが外れたときに確定し、範囲に寄せて刻みに丸める。読めない文字なら元に戻す。
+ * ↑↓ は押したらすぐ反映する（Shift で10刻み）。Esc で打ちかけを取り消す
+ */
+function NumberBox({ label, value, spec, onCommit, testId }: NumberBoxProps) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const v = commitDraft(draft, spec);
+    setDraft(null);
+    if (v !== null && v !== value) onCommit(v);
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      commit();
+    } else if (e.key === "Escape") {
+      setDraft(null);
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const base = draft === null ? value : (commitDraft(draft, spec) ?? value);
+      setDraft(null);
+      const v = nudge(base, e.key === "ArrowUp" ? 1 : -1, spec, e.shiftKey);
+      if (v !== value) onCommit(v);
+    }
+  };
+  return (
+    <input
+      type="text"
+      inputMode={Number.isInteger(spec.step) ? "numeric" : "decimal"}
+      className="tsp-numbox"
+      aria-label={label}
+      value={draft ?? String(value)}
+      data-testid={testId}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={onKeyDown}
+      onFocus={(e) => e.target.select()}
+    />
   );
 }

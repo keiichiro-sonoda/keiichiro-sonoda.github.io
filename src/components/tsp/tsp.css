@@ -202,34 +202,76 @@
   border-color: var(--ink);
   color: var(--panel);
 }
+/* 1行目に 見出し と 入力欄、2行目にスライダーを横幅いっぱい。
+   3つを1行に並べると、右の列が狭いときにスライダーが 60px ほどに縮んで使えない */
 .tsp-field {
   display: grid;
-  grid-template-columns: 11em minmax(0, 1fr) 3.5em;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label num"
+    "range range";
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
   font-size: 13px;
 }
-.tsp-field span {
+.tsp-field > span,
+.tsp-field > label {
+  grid-area: label;
+}
+.tsp-field > input[type="range"] {
+  grid-area: range;
+}
+.tsp-field > .tsp-num,
+.tsp-field > .tsp-numbox {
+  grid-area: num;
+}
+.tsp-field > span,
+.tsp-field > label {
   color: var(--muted);
 }
 .tsp-field input[type="range"] {
   width: 100%;
   accent-color: #18b39a;
 }
-.tsp-field input[type="number"] {
-  grid-column: span 2;
-  width: 100%;
-  padding: 4px 8px;
-  border-radius: 8px;
+/* スライダーの右の入力欄（細かく合わせる用）。単位は欄の外に置く */
+.tsp-num {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+/* 単位の無い欄も、単位のぶんの幅をあけて、入力欄の右端をそろえる */
+.tsp-num:not(:has(.tsp-unit))::after {
+  content: "%";
+  visibility: hidden;
+  font-size: 12px;
+}
+.tsp-numbox {
+  /* 単位（%）の有無で欄の幅が変わらないよう、欄そのものの幅を決める */
+  width: 5.5em;
+  padding: 3px 6px;
+  border-radius: 7px;
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--ink);
+  font: inherit;
   font-family: var(--f-mono);
-}
-.tsp-field output {
-  font-family: var(--f-mono);
-  text-align: right;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.tsp-numbox:hover {
+  border-color: var(--muted);
+}
+.tsp-numbox:focus {
+  border-color: #18b39a;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 179, 154, 0.25);
+}
+.tsp-unit {
+  color: var(--muted);
+  font-size: 12px;
+}
+.tsp-field-wide .tsp-numbox {
+  width: 9em;
 }
 .tsp-toggle {
   display: flex;
@@ -242,14 +284,7 @@
   width: 16px;
   height: 16px;
 }
-@media (max-width: 420px) {
-  .tsp-field {
-    grid-template-columns: minmax(0, 1fr) 3.5em;
-  }
-  .tsp-field span {
-    grid-column: span 2;
-  }
-}
+
 
 /* グラフ */
 .tsp-chart-box {

@@ -115,6 +115,7 @@ test.describe("巡回セールスマンの実験台", () => {
   test("同じシードなら同じ進化をたどる（最初から、で同じ結果になる）", async ({ page }) => {
     await ready(page);
     await page.getByTestId("seed").fill("12345");
+    await page.getByTestId("seed").press("Enter");
     await expect(page.getByTestId("generation")).toHaveText("0");
     for (let i = 0; i < 5; i++) await page.getByTestId("step").click();
     await expect(page.getByTestId("generation")).toHaveText("5");
@@ -163,11 +164,103 @@ test.describe("巡回セールスマンの実験台", () => {
     expect((await generation(page)) - g).toBeGreaterThan(200);
   });
 
+  test.describe("数値の入力欄", () => {
+    test("打っている途中では確定せず、Enter で確定する（スライダーも動く）", async ({ page }) => {
+      await ready(page);
+      await page.getByTestId("step").click();
+      await expect(page.getByTestId("generation")).toHaveText("1");
+      const box = page.getByTestId("count-input");
+      await box.click();
+      await box.pressSequentially("120");
+      // 「1」「12」の途中で都市を作り直していない
+      await page.waitForTimeout(300);
+      await expect(page.getByTestId("generation")).toHaveText("1");
+      await box.press("Enter");
+      await expect(page.getByTestId("generation")).toHaveText("0");
+      await expect(page.getByTestId("count")).toHaveValue("120");
+      await expect(box).toHaveValue("120");
+    });
+
+    test("フォーカスが外れても確定する", async ({ page }) => {
+      await ready(page);
+      await page.getByTestId("tournament-input").fill("7");
+      await page.getByTestId("tournament-input").blur();
+      await expect(page.getByTestId("tournament")).toHaveValue("7");
+    });
+
+    test("範囲の外は端に寄せる（入力欄はスライダーより広い範囲まで受け付ける）", async ({ page }) => {
+      await ready(page);
+      const box = page.getByTestId("population-input");
+      await box.fill("5000");
+      await box.press("Enter");
+      await expect(box).toHaveValue("1000"); // 入力欄の上限
+      await expect(page.getByTestId("population")).toHaveValue("500"); // スライダーは右端
+      await box.fill("3");
+      await box.press("Enter");
+      await expect(box).toHaveValue("10");
+    });
+
+    test("読めない値は元に戻り、Esc は打ちかけを取り消す", async ({ page }) => {
+      await ready(page);
+      const box = page.getByTestId("mutation-input");
+      await box.fill("abc");
+      await box.press("Enter");
+      await expect(box).toHaveValue("25");
+      await box.fill("90");
+      await box.press("Escape");
+      await expect(box).toHaveValue("25");
+      await expect(page.getByTestId("mutation")).toHaveValue("0.25");
+    });
+
+    test("% の欄は、確率に直して反映する", async ({ page }) => {
+      await ready(page);
+      const box = page.getByTestId("mutation-input");
+      await box.fill("37");
+      await box.press("Enter");
+      await expect(page.getByTestId("mutation")).toHaveValue("0.37");
+    });
+
+    test("↑↓ はすぐ反映し、Shift つきなら10刻み", async ({ page }) => {
+      await ready(page);
+      const t = page.getByTestId("tournament-input");
+      await t.focus();
+      await t.press("ArrowUp");
+      await expect(page.getByTestId("tournament")).toHaveValue("4");
+      await t.press("ArrowDown");
+      await t.press("ArrowDown");
+      await expect(t).toHaveValue("2");
+      await t.press("ArrowDown"); // 下限より下には行かない
+      await expect(t).toHaveValue("2");
+
+      const c = page.getByTestId("count-input");
+      await c.focus();
+      await c.press("Shift+ArrowUp");
+      await expect(c).toHaveValue("90");
+      await expect(page.getByTestId("generation")).toHaveText("0");
+    });
+
+    test("シードも、打っている途中では作り直さない", async ({ page }) => {
+      await ready(page);
+      await page.getByTestId("step").click();
+      const seed = page.getByTestId("seed");
+      await seed.click();
+      await seed.press("End");
+      await seed.pressSequentially("9");
+      await page.waitForTimeout(300);
+      await expect(page.getByTestId("generation")).toHaveText("1");
+      await seed.press("Enter");
+      await expect(page.getByTestId("generation")).toHaveText("0");
+    });
+  });
+
   test("二重の円では、内側の円の大きさを選べる", async ({ page }) => {
     await ready(page);
     await expect(page.getByTestId("inner")).toHaveCount(0);
     await page.getByRole("button", { name: "二重の円" }).click();
     await expect(page.getByTestId("inner")).toBeVisible();
+    await page.getByTestId("inner-input").fill("33");
+    await page.getByTestId("inner-input").press("Enter");
+    await expect(page.getByTestId("inner")).toHaveValue("0.33");
   });
 
   test("動かしたままパラメータを変えても止まらない", async ({ page }) => {
