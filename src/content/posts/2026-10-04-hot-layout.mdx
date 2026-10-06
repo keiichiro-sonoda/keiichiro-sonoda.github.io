@@ -1,17 +1,24 @@
 ---
-title: 同じ命令なのに、なぜ遅くなる？（関数の置き場所ラボ）
+title: 同じ命令なのに、なぜ遅くなる？
 date: 2026-10-04 17:30:00 +0900
-description: 関数の置き場所だけで速さが変わる仕組みを、動くメモリの帯で説明する図解。
+description: 中身を1文字も変えていない部分が遅くなった。原因は関数の置き場所だった。その仕組みと直し方を、動くメモリの帯で説明する。
 ---
 
-import Playground from "../../components/hot-layout/Playground";
+import Prerequisites from "../../components/hot-layout/Prerequisites.astro";
+import Explainer from "../../components/hot-layout/Explainer";
 
-関数が「メモリのどこに置かれたか」だけで、プログラムの速さが変わることがあります。
-[どうぶつしょうぎ完全解析RTA](https://github.com/keiichiro-sonoda/dobutsu-shogi-rta) の記録 #32 で、実行する命令がまったく同じ処理が 0.63 秒遅くなりました。
-その仕組みと、記録 #33 でそれをどう止めるかを、動くメモリの帯で説明する図解を作りました。
+プログラムの中身を1文字も変えていない部分が、遅くなることがあります。
+[どうぶつしょうぎ完全解析RTA](https://github.com/keiichiro-sonoda/dobutsu-shogi-rta) の記録 #32 では、実行する命令がまったく同じ処理が 0.63 秒遅くなりました。
+原因は、関数がメモリの「どこに置かれたか」でした。その仕組みと、記録 #33 での直し方を、動く図で説明します。
 
-**[図解を開く → 関数の置き場所ラボ](/explainers/hot-layout/)**
+<Prerequisites />
 
-下の帯は、図解と同じものです。つまみを動かすと、前の関数が伸びたときに後ろの関数がずれ、何億回も回るループが CPU の読み込みの区切り（64バイト）をまたぐ様子が見られます。
+## 動かして確かめる
 
-<Playground client:visible />
+帯の上のつまみで前の関数を伸ばすと、後ろの関数がずれていきます。下の「次へ」で、段階ごとに説明します。
+
+<Explainer client:load />
+
+<small>
+図は仕組みを見せるための模型です。関数の大きさや番地は実物の値ではありません。実際の CPU では、64バイトのかたまりのほかに、解読済みの命令を置いておく場所や、分岐の向きを予想するための表も、番地の影響を受けます。0.63 秒などの数字は記録 #32 の門番の実測です。詳しい記録は [dobutsu-shogi-rta のリポジトリ](https://github.com/keiichiro-sonoda/dobutsu-shogi-rta)にあります。
+</small>

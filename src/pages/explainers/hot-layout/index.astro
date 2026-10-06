@@ -1,127 +1,20 @@
 ---
-// 図解「関数の置き場所ラボ」。動かない部分（前提・注記）はここに HTML で書き、
-// 動く部分（帯と段階の説明）だけを React の部品にして読み込む（client:load）
-import Base from "../../../layouts/Base.astro";
-import Explainer from "../../../components/hot-layout/Explainer";
-import "../../../components/hot-layout/hot-layout.css";
-
-const RTA = "https://github.com/keiichiro-sonoda/dobutsu-shogi-rta";
+// 図解は記事の中に入れた（紹介の記事と図解のページの2段階をやめた）。公開済みのこの URL は記事へ転送する。
+// astro.config の redirects だと、build.format: "preserve" では /explainers/hot-layout.html に出力され、
+// 末尾が / の公開済み URL（index.html を探す）に当たらないので、ここに置く
+const to = "/2026/10/04/hot-layout.html";
 ---
 
-<Base
-  title="関数の置き場所ラボ"
-  description="関数がメモリのどこに置かれたかだけでプログラムの速さが変わる仕組みと、その止め方を、動くメモリの帯で説明する図解。"
-  wide
->
-  <link slot="head" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" />
-  <div class="page hl">
-    <header>
-      <div class="eyebrow"><a href={RTA}>どうぶつしょうぎ完全解析RTA</a> ／ 記録 #33 の図解</div>
-      <h1>同じ命令なのに、なぜ遅くなる？</h1>
-      <p class="lede">
-        プログラムの中身を1文字も変えていない部分が、遅くなることがあります。原因は、関数がメモリの「どこに置かれたか」でした。その仕組みと直し方を、動く図で説明します。
-      </p>
-    </header>
-
-    <section class="basics" aria-labelledby="basics-h">
-      <h2 class="sec" id="basics-h">はじめに：このページの前提</h2>
-      <div class="cards">
-        <div class="card">
-          <h3><span class="num">1</span>どんなプログラム？</h3>
-          <p>どうぶつしょうぎ（3×4マスの小さな将棋）で、最初の局面から指し進めて現れうる<b>2億4680万の局面すべて</b>について、勝ち負けと決着までの手数を決めるプログラムです。2021年に書いたものを少しずつ速くしていて、最初は8時間55分かかっていたのが、いまは約2分15秒です。速くする1回ごとに番号を付けて記録しています（記録 #32、#33 など）。</p>
-        </div>
-        <div class="card">
-          <h3><span class="num">2</span>時間はどこで使っている？</h3>
-          <p>工程は大きく2つです。<b>全探索</b>：最初の局面から指せる手を全部たどって、局面を集める。<b>後退解析</b>：決着がついた局面から逆向きにたどって、勝ち負けを広げる。どちらも「ある局面から指せる手を全部作る」処理を何億回も繰り返していて、そこが時間の大半です。</p>
-        </div>
-        <div class="card">
-          <h3><span class="num">3</span>関数・命令・番地</h3>
-          <p>プログラムは<b>関数</b>という部品の集まりです。コンパイルすると、関数は CPU が実行する<b>命令</b>（機械語）の列になり、メモリの上に並びます。メモリの位置は<b>番地</b>（バイト単位の住所のような番号）で表します。</p>
-        </div>
-        <div class="card">
-          <h3><span class="num">4</span>速くなったかの確かめ方</h3>
-          <p>変える前の版と変えた後の版を、交互に6回ずつ走らせて、差の平均と「本当の差はたぶんこの範囲」という<b>区間</b>を出します。区間が 0 をまたがなければ、偶然ではない差と判断します。この比べ方を、このプロジェクトでは<b>門番</b>と呼んでいます。</p>
-        </div>
-      </div>
-    </section>
-
-    <Explainer client:load />
-
-    <p class="note">
-      図は仕組みを見せるための模型です。関数の大きさや番地は実物の値ではありません。実際の CPU では、64バイトのかたまりのほかに、解読済みの命令を置いておく場所や、分岐の向きを予想するための表も、番地の影響を受けます。0.63 秒などの数字は記録 #32 の門番の実測です。詳しい記録は <a href={RTA}>dobutsu-shogi-rta のリポジトリ</a>にあります。
-    </p>
-  </div>
-</Base>
-
-<style>
-  .page {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 28px 16px 56px;
-  }
-  header {
-    display: grid;
-    gap: 6px;
-  }
-  .eyebrow {
-    font-family: var(--f-mono);
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-  }
-  .eyebrow a {
-    color: inherit;
-  }
-  h1 {
-    font-family: var(--f-display);
-    font-weight: 400;
-    font-size: clamp(26px, 5vw, 40px);
-    line-height: 1.3;
-    margin: 0;
-    text-wrap: balance;
-  }
-  .lede {
-    margin: 0;
-    color: var(--muted);
-    max-width: 62ch;
-  }
-  .basics {
-    display: grid;
-    gap: 12px;
-  }
-  .sec {
-    font-family: var(--f-display);
-    font-weight: 400;
-    font-size: 20px;
-    margin: 0;
-  }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-  @media (max-width: 620px) {
-    .cards {
-      grid-template-columns: 1fr;
-    }
-  }
-  .card {
-    background: var(--panel);
-    border-radius: 12px;
-    padding: 14px 16px;
-    min-width: 0;
-  }
-  .card h3 {
-    margin: 0 0 4px;
-    font-size: 15px;
-  }
-  .card p {
-    margin: 0;
-    font-size: 14px;
-  }
-  .num {
-    font-family: var(--f-mono);
-    color: var(--hot);
-    margin-right: 6px;
-  }
-</style>
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>移動しました</title>
+    <meta http-equiv="refresh" content={`0;url=${to}`} />
+    <link rel="canonical" href={new URL(to, Astro.site).href} />
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <p>このページは <a href={to}>同じ命令なのに、なぜ遅くなる？</a> に移りました。</p>
+  </body>
+</html>

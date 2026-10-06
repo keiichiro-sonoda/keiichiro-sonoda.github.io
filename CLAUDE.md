@@ -20,7 +20,8 @@
 | 場所 | 中身 |
 |---|---|
 | `src/content/posts/` | 記事（Markdown / MDX）。ファイル名は `YYYY-MM-DD-<名前>.mdx`。URL は Jekyll 時代と同じ `/YYYY/MM/DD/<名前>.html`（`src/lib/posts.ts`） |
-| `src/pages/explainers/<名前>/` | 図解のページ。動く部分は `src/components/<名前>/` の React の部品 |
+| `src/components/<名前>/` | 図解の部品。図解は記事（`src/content/posts/`）の中に直接置き、別のページを作らない |
+| `src/pages/explainers/hot-layout/` | 公開済みの古い URL を記事へ転送するだけのページ（図解を記事に入れる前の名残） |
 | `src/components/tsp/` | 巡回セールスマンの実験台。**作り込んだ部品の見本**: 計算（`engine/`）・Worker で回す役（`runner.ts`）・画面（`.tsx`）を分け、計算と実行役に単体テストを付けている |
 | `e2e/` | Playwright の e2e テスト（サイト全体の煙テストと、実験台の操作） |
 | `src/layouts/`・`src/styles/global.css` | サイト共通の枠と色（ライトとダーク） |
@@ -50,7 +51,7 @@ npm run test:e2e  # ビルドして e2e テスト（Playwright）。初回だけ
 
 - **外部の CDN から `<script src>` で読まない。**npm で版を固定して入れる（React の部品なら import、
   素の `<script>` なら `tools/vendor.mjs` の表に足して `/vendor/` から読む）。理由は `tools/vendor.mjs` の冒頭
-- 記事を足したら、トップの一覧に自動で出る。図解を足したら、紹介の記事を1本置く
+- 記事を足したら、トップの一覧に自動で出る。図解は記事そのものとして足す（「紹介の記事 → 図解のページ」の2段階にしない）
 
 ## 図解を作るとき
 

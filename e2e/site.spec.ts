@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test";
 const PAGES = [
   "/",
   "/about/",
-  "/explainers/hot-layout/",
   "/2026/10/04/hot-layout.html",
   "/2023/07/11/tsp-ga.html",
   "/2023/07/13/multi-stock-encoder.html",
@@ -37,4 +36,10 @@ test("無い URL は 404 のページになる", async ({ page }) => {
   const res = await page.goto("/no-such-page.html");
   expect(res?.status()).toBe(404);
   await expect(page.getByText("ページが見つかりませんでした")).toBeVisible();
+});
+
+test("図解の古い URL（/explainers/hot-layout/）は、記事へ転送する", async ({ page }) => {
+  await page.goto("/explainers/hot-layout/");
+  await expect(page).toHaveURL(/\/2026\/10\/04\/hot-layout\.html$/);
+  await expect(page.locator("h1")).toHaveText("同じ命令なのに、なぜ遅くなる？");
 });

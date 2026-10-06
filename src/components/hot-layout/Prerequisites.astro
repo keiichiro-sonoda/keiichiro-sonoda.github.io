@@ -1,0 +1,67 @@
+---
+// 図解の前提のカード4枚。読者がリンク先を読まなくても、この記事だけで分かるようにするため（docs/explainer-guide.md の失敗1）
+---
+
+<section class="hl prereq" aria-labelledby="prereq-h">
+  <h2 id="prereq-h">はじめに：この記事の前提</h2>
+  <div class="cards">
+    <div class="card">
+      <h3><span class="num">1</span>どんなプログラム？</h3>
+      <p>どうぶつしょうぎ（3×4マスの小さな将棋）で、最初の局面から指し進めて現れうる<b>2億4680万の局面すべて</b>について、勝ち負けと決着までの手数を決めるプログラムです。2021年に書いたものを少しずつ速くしていて、最初は8時間55分かかっていたのが、いまは約2分15秒です。速くする1回ごとに番号を付けて記録しています（記録 #32、#33 など）。</p>
+    </div>
+    <div class="card">
+      <h3><span class="num">2</span>時間はどこで使っている？</h3>
+      <p>工程は大きく2つです。<b>全探索</b>：最初の局面から指せる手を全部たどって、局面を集める。<b>後退解析</b>：決着がついた局面から逆向きにたどって、勝ち負けを広げる。どちらも「ある局面から指せる手を全部作る」処理を何億回も繰り返していて、そこが時間の大半です。</p>
+    </div>
+    <div class="card">
+      <h3><span class="num">3</span>関数・命令・番地</h3>
+      <p>プログラムは<b>関数</b>という部品の集まりです。コンパイルすると、関数は CPU が実行する<b>命令</b>（機械語）の列になり、メモリの上に並びます。メモリの位置は<b>番地</b>（バイト単位の住所のような番号）で表します。</p>
+    </div>
+    <div class="card">
+      <h3><span class="num">4</span>速くなったかの確かめ方</h3>
+      <p>変える前の版と変えた後の版を、交互に6回ずつ走らせて、差の平均と「本当の差はたぶんこの範囲」という<b>区間</b>を出します。区間が 0 をまたがなければ、偶然ではない差と判断します。この比べ方を、このプロジェクトでは<b>門番</b>と呼んでいます。</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .prereq {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 24px;
+  }
+  .prereq h2 {
+    margin: 0;
+  }
+  /* 4枚なので2列（「3枚＋1枚」にしない。docs/explainer-guide.md の失敗6） */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 620px) {
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--grid);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-width: 0;
+  }
+  .card h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+  .card p {
+    margin: 0;
+    font-size: 14px;
+  }
+  .num {
+    font-family: var(--f-mono);
+    color: var(--hot);
+    margin-right: 6px;
+  }
+</style>
