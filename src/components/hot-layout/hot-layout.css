@@ -1,7 +1,6 @@
 /* 関数の置き場所の図解の見た目。すべて .hl の中に閉じ込め、サイトのほかのページに漏らさない。
    記事の本文（.prose）の見出し・段落の書式と同じ強さだと、書いた順番で勝ち負けが変わるので、
    個々の要素への指定は .hl.hl で一段強くする */
-@import url("https://fonts.googleapis.com/css2?family=DotGothic16&display=swap");
 .hl {
   --bg: #eef2f5;
   --panel: #ffffff;
@@ -16,7 +15,6 @@
   --fix: #138a7a;
   --warn: #c2410c;
   --line-a: rgba(19, 138, 122, 0.1);
-  --f-display: "DotGothic16", "Zen Kaku Gothic New", system-ui, sans-serif;
   --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   display: grid;
@@ -93,7 +91,10 @@
 .hl.hl .steps { display: flex; flex-wrap: wrap; gap: 6px; }
 .hl.hl .steps button { font-family: var(--f-mono); font-size: 13px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--grid); background: transparent; color: var(--ink); cursor: pointer; }
 .hl.hl .steps button[aria-current="step"] { background: var(--hot); border-color: var(--hot); color: var(--hot-ink); }
-.hl.hl .scene h2 { font-family: var(--f-display); font-weight: 400; font-size: clamp(20px, 3.6vw, 26px); margin: 0 0 6px; line-height: 1.4; text-wrap: balance; }
+/* 段階の見出しと説明は記事の一部なので、記事の見出し（20px・太字）と本文（16px）にそろえる。
+   独立したページだったころの表示用フォント（DotGothic16）は、記事にまとめたときに食い違ったのでやめた */
+.hl.hl .scene { font-size: 16px; }
+.hl.hl .scene h2 { font-size: 20px; font-weight: 700; margin: 0 0 6px; line-height: 1.4; text-wrap: balance; }
 .hl.hl .scene p { margin: 0 0 10px; max-width: 64ch; }
 .hl.hl .scene .big { font-family: var(--f-mono); font-size: clamp(22px, 5vw, 34px); color: var(--warn); }
 .hl.hl .nav { display: flex; gap: 10px; flex-wrap: wrap; }

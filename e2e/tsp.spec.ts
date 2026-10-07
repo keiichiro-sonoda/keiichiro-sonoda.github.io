@@ -55,26 +55,32 @@ test.describe("巡回セールスマンの実験台", () => {
     await page.getByTestId("population").fill("500");
     await page.getByTestId("speed-max").click();
     await expect(page.getByTestId("status")).toHaveText("一時停止");
+    // 画面のフレームが ms のあいだに何回回るか
+    const countFrames = (ms: number) =>
+      page.evaluate(
+        (ms) =>
+          new Promise<number>((resolve) => {
+            let n = 0;
+            const end = performance.now() + ms;
+            const loop = () => {
+              n++;
+              if (performance.now() < end) requestAnimationFrame(loop);
+              else resolve(n);
+            };
+            requestAnimationFrame(loop);
+          }),
+        ms,
+      );
+    // 基準: 動かす前のフレーム数。機械が混んでいる（ほかの重い処理が走っている）と、ここも下がる。
+    // 決め打ちの「◯fps 以上」は機械の混み具合を測ってしまい、ほかのプロセスが CPU を使っているだけで落ちた
+    const idle = await countFrames(1000);
     await page.evaluate(() => ((window as unknown as { __long: number[] }).__long = []));
 
     await page.getByTestId("toggle").click();
     await expect(page.getByTestId("status")).toHaveText("進化中");
-    // 2秒のあいだ、画面のフレームがどれだけ回るか
-    const frames = await page.evaluate(
-      () =>
-        new Promise<number>((resolve) => {
-          let n = 0;
-          const end = performance.now() + 2000;
-          const loop = () => {
-            n++;
-            if (performance.now() < end) requestAnimationFrame(loop);
-            else resolve(n);
-          };
-          requestAnimationFrame(loop);
-        }),
-    );
-    // 20fps 以上。テストを並列に走らせると負荷で 30fps を割ることがある。固まったかどうかの主な判定は下の長いタスク
-    expect(frames).toBeGreaterThan(40);
+    const running = (await countFrames(2000)) / 2;
+    // 動かしている間も、動かす前の半分以上のフレームが回る（固まれば、ほとんど回らない）
+    expect(running, `動かす前 ${idle} フレーム/秒、動かしている間 ${running} フレーム/秒`).toBeGreaterThanOrEqual(idle * 0.5);
     const long = await page.evaluate(() => (window as unknown as { __long: number[] }).__long);
     expect(Math.max(0, ...long)).toBeLessThan(200);
     expect(await generation(page)).toBeGreaterThan(0);

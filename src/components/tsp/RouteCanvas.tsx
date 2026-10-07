@@ -15,6 +15,7 @@ export default function RouteCanvas({ points, route, routeVersion }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const flash = useRef(0); // 1 → 0 に減っていく光り方
   const lastVersion = useRef(routeVersion);
+  const lastChangeAt = useRef(0);
   const raf = useRef(0);
   const drawRef = useRef<(() => void) | null>(null);
 
@@ -24,7 +25,9 @@ export default function RouteCanvas({ points, route, routeVersion }: Props) {
     const draw = () => {
       const ctx = el.getContext("2d");
       if (!ctx) return;
-      const dpr = window.devicePixelRatio || 1;
+      // 画素の密度は2倍までにする。スマホ（2.6倍など）でそのまま使うと Canvas が約1000×1000画素になり、
+      // 描くたびの受け渡し（Commit）が重くて、進化中のフレームが半分以下に落ちた。2倍でも線の細さは見分けられない
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
       const size = el.clientWidth;
       if (el.width !== Math.round(size * dpr)) {
         el.width = Math.round(size * dpr);
@@ -54,20 +57,24 @@ export default function RouteCanvas({ points, route, routeVersion }: Props) {
       const r = route.current;
       if (r && r.length === points.length) {
         const f = flash.current;
+        const path = new Path2D();
+        r.forEach((idx, i) => {
+          const [x, y] = px(points[idx]);
+          if (i === 0) path.moveTo(x, y);
+          else path.lineTo(x, y);
+        });
+        path.closePath();
+        // 光は shadowBlur を使わず、太い半透明の線を下に敷いて出す。
+        // shadowBlur はぼかしの計算が重く、都市が多いと進化中のフレームが半分以下（60 → 12〜28fps）に落ちた
         ctx.save();
         ctx.lineJoin = "round";
         ctx.strokeStyle = color("--tsp-route");
-        ctx.shadowColor = color("--tsp-route");
-        ctx.shadowBlur = 6 + 18 * f;
-        ctx.lineWidth = 1.8 + 1.4 * f;
-        ctx.beginPath();
-        r.forEach((idx, i) => {
-          const [x, y] = px(points[idx]);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.closePath();
-        ctx.stroke();
+        ctx.globalAlpha = 0.16 + 0.24 * f;
+        ctx.lineWidth = 6 + 6 * f;
+        ctx.stroke(path);
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 1.8 + 1.2 * f;
+        ctx.stroke(path);
         ctx.restore();
       }
 
@@ -95,7 +102,12 @@ export default function RouteCanvas({ points, route, routeVersion }: Props) {
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (routeVersion !== lastVersion.current) {
       lastVersion.current = routeVersion;
-      flash.current = reduce ? 0 : 1;
+      // 改善が続いている（前の改善から 300ms 以内）ときは光らせない。全力だとほぼ毎回縮むので、
+      // 光が消える前に次が始まり、毎フレーム描き直すことになる。光るのは、しばらく止まっていた後に縮んだときだけ
+      const now = performance.now();
+      const quiet = now - lastChangeAt.current > 300;
+      lastChangeAt.current = now;
+      flash.current = reduce || !quiet ? 0 : 1;
     }
     cancelAnimationFrame(raf.current);
     const loop = () => {
