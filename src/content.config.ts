@@ -10,6 +10,8 @@ const posts = defineCollection({
     date: z.coerce.date(),
     description: z.string().optional(),
     draft: z.boolean().default(false),
+    // true なら、ページからの通信（fetch・WebSocket・送信の類）をブラウザに止めさせる。手元のデータを扱う道具のため
+    offline: z.boolean().default(false),
   }),
 });
 

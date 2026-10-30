@@ -6,11 +6,19 @@ interface Props {
   title: string;
   date: Date;
   description?: string;
+  offline?: boolean;
 }
-const { title, date, description } = Astro.props;
+const { title, date, description, offline = false } = Astro.props;
 ---
 
 <Base title={title} description={description}>
+  {
+    /* 書体と画像は読むが、スクリプトからの通信（connect-src）とフォームの送信は止める。
+       開発サーバーは画面の更新に WebSocket を使うので、本番のビルドだけに入れる */
+    offline && import.meta.env.PROD && (
+      <meta slot="head" http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'" />
+    )
+  }
   <article>
     <header>
       <time datetime={date.toISOString()}>{formatDate(date)}</time>

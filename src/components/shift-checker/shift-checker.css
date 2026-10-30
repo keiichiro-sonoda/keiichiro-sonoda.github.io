@@ -1,0 +1,378 @@
+/* 勤務表のチェッカー。すべて .sc の中に閉じ込める */
+.sc {
+  --sc-error: #d1343e;
+  --sc-warn: #d98a00;
+  --sc-info: #4a7bd0;
+  --sc-night: rgba(80, 90, 200, 0.16);
+  --sc-ake: rgba(80, 90, 200, 0.07);
+  --sc-off: rgba(19, 138, 122, 0.12);
+  --sc-leave: rgba(19, 138, 122, 0.22);
+  --sc-sat: #2f6fd6;
+  --sc-sun: #d1343e;
+  margin: 8px 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sc {
+    --sc-error: #ff6b74;
+    --sc-warn: #ffb547;
+    --sc-info: #7ea8ff;
+    --sc-night: rgba(130, 140, 255, 0.2);
+    --sc-ake: rgba(130, 140, 255, 0.09);
+    --sc-off: rgba(60, 199, 176, 0.12);
+    --sc-leave: rgba(60, 199, 176, 0.24);
+    --sc-sat: #7ea8ff;
+    --sc-sun: #ff6b74;
+  }
+}
+:root[data-theme="dark"] .sc {
+  --sc-error: #ff6b74;
+  --sc-warn: #ffb547;
+  --sc-info: #7ea8ff;
+  --sc-night: rgba(130, 140, 255, 0.2);
+  --sc-ake: rgba(130, 140, 255, 0.09);
+  --sc-off: rgba(60, 199, 176, 0.12);
+  --sc-leave: rgba(60, 199, 176, 0.24);
+  --sc-sat: #7ea8ff;
+  --sc-sun: #ff6b74;
+}
+
+.sc-privacy {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+/* 入力 */
+.sc-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  .sc-input {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sc-label {
+  display: block;
+  font-weight: 700;
+}
+.sc-label-next {
+  margin-top: 12px;
+}
+.sc-hint {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.sc-textarea {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+  resize: vertical;
+}
+.sc-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.sc button {
+  font: inherit;
+  color: inherit;
+}
+.sc-buttons button {
+  padding: 4px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.sc-buttons button:first-child {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.sc-buttons button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sc-settings {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.sc-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.sc-field small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.sc-field-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.sc-field input {
+  width: 4.5em;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--f-mono);
+}
+.sc-field input[type="text"] {
+  width: 7em;
+}
+.sc-field input[aria-label="年"] {
+  width: 5.5em;
+}
+
+.sc-details {
+  margin-top: 16px;
+}
+.sc-details summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.sc-details-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.sc-errors {
+  margin: 16px 0 0;
+  padding: 8px 12px 8px 28px;
+  border: 1px solid var(--sc-error);
+  border-radius: 8px;
+  color: var(--sc-error);
+}
+
+/* 結果 */
+.sc-result {
+  margin-top: 20px;
+}
+.sc-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+.sc-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.sc-count b {
+  font-family: var(--f-mono);
+}
+.sc-count[data-severity="違反"] b {
+  color: var(--sc-error);
+}
+.sc-count[data-severity="注意"] b {
+  color: var(--sc-warn);
+}
+.sc-count[data-severity="参考"] b {
+  color: var(--sc-info);
+}
+.sc-warn-days {
+  color: var(--sc-warn);
+}
+
+/* 表は横に長いので、この枠の中だけで横に送る */
+.sc-grid-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.sc-grid {
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.sc-grid th,
+.sc-grid td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+.sc-grid thead th {
+  font-weight: 400;
+  color: var(--muted);
+}
+.sc-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel);
+  text-align: left !important;
+  font-family: var(--f-mono);
+}
+.sc-day {
+  min-width: 26px;
+  border-radius: 4px;
+}
+.sc-day[data-week="sat"] {
+  color: var(--sc-sat) !important;
+}
+.sc-day[data-week="sun"] {
+  color: var(--sc-sun) !important;
+}
+.sc-unit {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.sc-cell {
+  position: relative;
+  min-width: 26px;
+}
+.sc-cell[data-kind="夜勤"] {
+  background: var(--sc-night);
+}
+.sc-cell[data-kind="明け"] {
+  background: var(--sc-ake);
+}
+.sc-cell[data-kind="公休"] {
+  background: var(--sc-off);
+}
+.sc-cell[data-kind="休暇"] {
+  background: var(--sc-leave);
+}
+.sc-cell[data-requested]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+/* 指摘のあるマスは枠で示す（地の色は記号の種類のまま） */
+.sc-grid [data-severity] {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--sc-sev);
+}
+.sc-grid [data-severity="違反"],
+.sc-issues [data-severity="違反"] {
+  --sc-sev: var(--sc-error);
+}
+.sc-grid [data-severity="注意"],
+.sc-issues [data-severity="注意"] {
+  --sc-sev: var(--sc-warn);
+}
+.sc-grid [data-severity="参考"],
+.sc-issues [data-severity="参考"] {
+  --sc-sev: var(--sc-info);
+}
+.sc-grid [data-selected] {
+  outline: 3px solid var(--sc-sev);
+  outline-offset: -1px;
+  font-weight: 700;
+}
+.sc-num {
+  font-family: var(--f-mono);
+}
+.sc-diff {
+  color: var(--muted);
+  font-size: 10px;
+}
+.sc-num[data-off="under"] {
+  color: var(--sc-error);
+  font-weight: 700;
+}
+.sc-coverage th {
+  font-weight: 400;
+  color: var(--muted);
+}
+.sc-coverage tr:first-child > * {
+  border-top: 2px solid var(--line);
+}
+.sc-coverage td[data-short] {
+  color: var(--sc-error);
+  font-weight: 700;
+  background: rgba(209, 52, 62, 0.1);
+}
+
+/* 指摘の一覧 */
+.sc-issues {
+  max-height: 360px;
+  overflow-y: auto;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.sc-issues li {
+  border-bottom: 1px solid var(--line);
+}
+.sc-issues li:last-child {
+  border-bottom: 0;
+}
+.sc-issues button {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.sc-issues button:disabled {
+  cursor: default;
+}
+.sc-issues li[data-selected] {
+  background: color-mix(in srgb, var(--sc-sev) 14%, transparent);
+}
+.sc-tag {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--sc-sev);
+  /* ライトでは白地の色、ダークでは暗い地の色。どちらでも札の色と反対の明るさになる */
+  color: var(--panel);
+  font-size: 12px;
+  font-weight: 700;
+}
+.sc-rule {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sc-none {
+  padding: 8px 12px;
+  color: var(--muted);
+}

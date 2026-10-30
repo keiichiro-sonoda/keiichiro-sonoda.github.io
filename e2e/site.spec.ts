@@ -5,6 +5,7 @@ const PAGES = [
   "/",
   "/about/",
   "/2026/10/04/hot-layout.html",
+  "/2026/10/30/shift-checker.html",
   "/2023/07/11/tsp-ga.html",
   "/2023/07/13/multi-stock-encoder.html",
   "/2023/07/28/unbiased-variance.html",
