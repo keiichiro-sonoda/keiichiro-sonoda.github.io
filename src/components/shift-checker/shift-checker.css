@@ -296,7 +296,8 @@
   --sc-sev: var(--sc-info);
 }
 .sc-grid [data-selected] {
-  outline: 3px solid var(--sc-sev);
+  /* 指摘の無いマスを選んだとき（変えたマスの一覧から）は、強調の色で枠を出す */
+  outline: 3px solid var(--sc-sev, var(--accent));
   outline-offset: -1px;
   font-weight: 700;
 }
@@ -375,4 +376,137 @@
 .sc-none {
   padding: 8px 12px;
   color: var(--muted);
+}
+
+/* 決まりの重み */
+.sc-levels {
+  display: grid;
+  gap: 4px;
+}
+.sc-field select {
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+/* 直す・組む */
+.sc-score {
+  color: var(--muted);
+  font-family: var(--f-mono);
+  font-size: 13px;
+}
+.sc-solve {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.sc-solve > .sc-buttons {
+  margin-top: 0;
+  align-items: center;
+}
+.sc-seconds {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.sc-seconds input {
+  width: 3.5em;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--f-mono);
+}
+.sc-progress {
+  margin: 4px 0;
+  color: var(--accent);
+  font-size: 13px;
+}
+.sc-proposal {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+.sc-proposal p {
+  margin: 0;
+}
+.sc-solve .sc-details {
+  margin-top: 8px;
+}
+/* 修正案で変えたマス */
+.sc-cell[data-changed] {
+  outline: 2px dashed var(--accent);
+  outline-offset: -3px;
+  font-weight: 700;
+}
+
+/* 修正案の差分 */
+.sc-was {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1;
+}
+.sc-proposal .sc-buttons button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.sc-changes {
+  margin-top: 8px;
+}
+.sc-changes summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.sc-changes ol,
+.sc-changes ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sc-changes ol button {
+  padding: 2px 8px;
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  background: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sc-changes li[data-selected] button {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.sc-was-text {
+  color: var(--muted);
+}
+.sc-diff-issues {
+  flex-direction: column;
+  flex-wrap: nowrap !important;
+  font-size: 13px;
+}
+.sc-mark {
+  margin-right: 4px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.sc-mark-new {
+  color: var(--sc-error);
 }

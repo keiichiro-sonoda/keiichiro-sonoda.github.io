@@ -1,11 +1,35 @@
-// 勤務表のチェッカー。貼り付けた表を決まりに照らして色を付ける。計算は軽いので Worker には移さない
+// 勤務表のチェッカー。貼り付けた表を決まりに照らして色を付け、直す案や0から組んだ案も出す
+// 判定は軽いので画面のスレッドで、直す・組む（局所探索）は Worker で回す
 // 貼り付けた中身はこのページの中だけで扱い、送らない・保存しない（記事のページで通信そのものも止めている）
 import { useMemo, useState, type ReactNode } from "react";
-import { DEFAULT_CODES_TEXT, parseCodes, type CodeDef } from "./engine/codes";
-import { check, SEVERITIES, type Issue, type Severity } from "./engine/check";
-import { DEFAULT_NEEDS_TEXT, DEFAULT_RULES, needLabel, parseNeeds } from "./engine/rules";
+import { DEFAULT_CODES_TEXT, parseCodes, type CodeDef, type CodeTable } from "./engine/codes";
+import { check, SEVERITIES, scoreOf, type Issue, type Score, type Severity, type StaffAttr } from "./engine/check";
+import {
+  DEFAULT_LEVELS,
+  DEFAULT_NEEDS_TEXT,
+  DEFAULT_RULES,
+  LEVELS,
+  needLabel,
+  parseNeeds,
+  RULE_HINTS,
+  RULE_KEYS,
+  type Level,
+  type RuleKey,
+  type Rules,
+} from "./engine/rules";
 import { daysInMonth, makeSample, SAMPLE_MONTH, SAMPLE_YEAR, weekday } from "./engine/sample";
-import { parseAssignments, parseRequests, parseTable } from "./engine/table";
+import { inferAttrs, toTableText, type SolveMode } from "./engine/solve";
+import {
+  attributesText,
+  parseAssignments,
+  parseAttributes,
+  parseRequests,
+  parseTable,
+  type Assignment,
+  type Request,
+  type Roster,
+} from "./engine/table";
+import { useSolver } from "./useSolver";
 import "./shift-checker.css";
 
 const WEEK = "日月火水木金土";
@@ -35,6 +59,27 @@ const cellKey = (staffId: string, day: number) => `${staffId}@${day}`;
 const dayKey = (day: number) => `@${day}`;
 // 人に付く指摘はそのマス、人数の指摘はその日の見出しに付ける
 const issueKey = (i: Issue) => (i.day === undefined ? undefined : i.staffId ? cellKey(i.staffId, i.day) : dayKey(i.day));
+const scoreText = (s: Score) => `必須の違反 ${s.hard}・罰点 ${s.soft}`;
+
+interface CheckInput {
+  roster: Roster;
+  codes: CodeTable;
+  rules: Rules;
+  requests: Request[];
+  assignments: Assignment[];
+  attrs: Map<string, StaffAttr>;
+}
+
+function checkRoster(input: CheckInput, roster: Roster) {
+  const checked = check(roster, input.codes, input.rules, input.requests, input.assignments, input.attrs);
+  return {
+    roster,
+    codes: input.codes,
+    requests: new Set(input.requests.map((r) => cellKey(r.id, r.day))),
+    score: scoreOf(checked.issues),
+    ...checked,
+  };
+}
 
 export default function ShiftChecker() {
   const [tableText, setTableText] = useState("");
@@ -43,8 +88,18 @@ export default function ShiftChecker() {
   const [codesText, setCodesText] = useState(DEFAULT_CODES_TEXT);
   const [needsText, setNeedsText] = useState(DEFAULT_NEEDS_TEXT);
   const [settings, setSettings] = useState<Settings>(INITIAL_SETTINGS);
+  const [levels, setLevels] = useState<Record<RuleKey, Level>>(DEFAULT_LEVELS);
+  const [attrsText, setAttrsText] = useState("");
+  // 架空の表（23人・30日）で、1秒に十数万手を試せる。人が多い表ほど遅くなるので、余裕を見て10秒にする
+  const [seconds, setSeconds] = useState(10);
   const [shown, setShown] = useState<Record<Severity, boolean>>({ 違反: true, 注意: true, 参考: false });
   const [selected, setSelected] = useState<string>();
+  const [copied, setCopied] = useState(false);
+  const solver = useSolver();
+  // 案を出したときの入力。入力を変えたら、その案は古いので見せない
+  const [job, setJob] = useState<{ mode: SolveMode; key: string }>();
+  // 案を出したあと、案を捨てずに元の表を見比べる
+  const [viewOriginal, setViewOriginal] = useState(false);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings((s) => ({ ...s, [key]: value }));
 
@@ -53,7 +108,7 @@ export default function ShiftChecker() {
     setTableText(s.table);
     setRequestsText(s.requests);
     setAssignmentsText(s.assignments);
-    setSettings({ ...INITIAL_SETTINGS, units: s.units.join(", ") });
+    setSettings({ ...INITIAL_SETTINGS, units: s.units.join(", "), koukyuBase: s.koukyuBase });
     setSelected(undefined);
   };
   const clear = () => {
@@ -63,22 +118,27 @@ export default function ShiftChecker() {
     setSelected(undefined);
   };
 
-  const { errors, result } = useMemo(() => {
+  const inputsKey = [tableText, codesText, needsText, requestsText, assignmentsText, attrsText, JSON.stringify(settings), JSON.stringify(levels)].join("\u0001");
+
+  const { errors, input } = useMemo(() => {
     const table = parseTable(tableText);
     const codes = parseCodes(codesText);
     const needs = parseNeeds(needsText);
     const requests = parseRequests(requestsText);
     const assignments = parseAssignments(assignmentsText);
+    const attrs = parseAttributes(attrsText);
     const errors = [
       ...(tableText.trim() ? table.errors : []),
       ...codes.errors,
       ...needs.errors,
       ...requests.errors,
       ...assignments.errors,
+      ...attrs.errors,
     ];
-    if (!tableText.trim() || !table.roster) return { errors, result: undefined };
-    const rules = {
+    if (!tableText.trim() || !table.roster) return { errors, input: undefined };
+    const rules: Rules = {
       needs: needs.needs,
+      levels,
       units: settings.units.split(/[,、\s]+/).filter(Boolean),
       koukyuBase: settings.koukyuBase,
       maxConsecutive: settings.maxConsecutive,
@@ -87,14 +147,68 @@ export default function ShiftChecker() {
     };
     return {
       errors,
-      result: {
-        roster: table.roster,
-        codes: codes.table,
-        requests: new Set(requests.requests.map((r) => cellKey(r.id, r.day))),
-        ...check(table.roster, codes.table, rules, requests.requests, assignments.assignments),
-      },
+      input: { roster: table.roster, codes: codes.table, rules, requests: requests.requests, assignments: assignments.assignments, attrs: attrs.attrs },
     };
-  }, [tableText, codesText, needsText, requestsText, assignmentsText, settings]);
+  }, [tableText, codesText, needsText, requestsText, assignmentsText, attrsText, settings, levels]);
+
+  // 案があれば案を、無ければ貼った表を見せる
+  const fresh = job?.key === inputsKey;
+  const proposal: Roster | undefined = useMemo(
+    () =>
+      input && fresh && solver.grid
+        ? { days: solver.grid[0]?.length ?? 0, staff: input.roster.staff.map((s, i) => ({ ...s, codes: solver.grid![i] })) }
+        : undefined,
+    [input, fresh, solver.grid],
+  );
+
+  const original = useMemo(() => input && checkRoster(input, input.roster), [input]);
+  const proposed = useMemo(() => input && proposal && checkRoster(input, proposal), [input, proposal]);
+  const result = proposed && !viewOriginal ? proposed : original;
+  const showingProposal = result === proposed && proposed !== undefined;
+
+  // 修正案で変えたマス（元の記号と案の記号）。案を見ているときも、元の表を見ているときも印を付ける
+  const changes = new Map<string, { id: string; day: number; from: string; to: string }>();
+  if (proposal && input && job?.mode === "fix") {
+    proposal.staff.forEach((s, i) =>
+      s.codes.forEach((to, d) => {
+        const from = input.roster.staff[i].codes[d];
+        if (to !== from) changes.set(cellKey(s.id, d + 1), { id: s.id, day: d + 1, from, to });
+      }),
+    );
+  }
+  // 案で直った指摘と、案で新しく出た指摘
+  const issueId = (i: Issue) => `${i.rule}|${i.message}`;
+  const diff = useMemo(() => {
+    if (!original || !proposed || job?.mode !== "fix") return undefined;
+    const before = new Set(original.issues.map(issueId));
+    const after = new Set(proposed.issues.map(issueId));
+    return { fixed: original.issues.filter((i) => !after.has(issueId(i))), added: proposed.issues.filter((i) => !before.has(issueId(i))) };
+  }, [original, proposed, job?.mode]);
+
+  const startSolve = (mode: SolveMode) => {
+    if (!input) return;
+    setJob({ mode, key: inputsKey });
+    setViewOriginal(false);
+    setSelected(undefined);
+    setCopied(false);
+    solver.start({ ...input, mode, year: settings.year, month: settings.month, seed: Math.floor(Math.random() * 2 ** 31) }, seconds);
+  };
+  const closeProposal = () => {
+    solver.discard();
+    setJob(undefined);
+  };
+  const adopt = () => {
+    if (!proposal) return;
+    setTableText(toTableText(proposal));
+    closeProposal();
+  };
+  const copy = () => {
+    if (!proposal) return;
+    void navigator.clipboard.writeText(toTableText(proposal)).then(() => setCopied(true));
+  };
+  const fillAttrs = () => {
+    if (input) setAttrsText(attributesText(inferAttrs(input.roster, input.codes, settings.koukyuBase)));
+  };
 
   const visible = (result?.issues ?? []).filter((i) => shown[i.severity]);
   // マスごとに、いちばん重い指摘を色にする
@@ -155,7 +269,7 @@ export default function ShiftChecker() {
           <label className="sc-label" htmlFor="sc-requests">
             休み希望
           </label>
-          <p className="sc-hint">1行に1人「番号: 日, 日」</p>
+          <p className="sc-hint">1行に1人「番号: 日, 日」。必ず休みにする日は「15!」</p>
           <textarea
             id="sc-requests"
             className="sc-textarea"
@@ -203,8 +317,27 @@ export default function ShiftChecker() {
       </section>
 
       <details className="sc-details">
-        <summary>記号の表と、毎日必要な人数を変える</summary>
+        <summary>決まりの重み・記号の表・毎日必要な人数を変える</summary>
         <div className="sc-details-body">
+          <div>
+            <span className="sc-label">決まりの重み</span>
+            <p className="sc-hint">必須を破らないことを最優先し、そのうえで高・中・低の順に守ります。人数の重みは「毎日必要な人数」の行の終わりに書きます</p>
+            <div className="sc-levels">
+              {RULE_KEYS.map((k) => (
+                <label key={k} className="sc-field">
+                  <span>
+                    {k}
+                    <small>{RULE_HINTS[k]}</small>
+                  </span>
+                  <select value={levels[k]} aria-label={`${k}の重み`} onChange={(e) => setLevels((v) => ({ ...v, [k]: e.target.value as Level }))}>
+                    {LEVELS.map((l) => (
+                      <option key={l}>{l}</option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="sc-label" htmlFor="sc-codes">
               記号の表
@@ -216,7 +349,7 @@ export default function ShiftChecker() {
             <label className="sc-label" htmlFor="sc-needs">
               毎日必要な人数
             </label>
-            <p className="sc-hint">「各ユニット 札 人数」か「全体 種類 人数 職種に含む文字」</p>
+            <p className="sc-hint">「各ユニット 札 人数 重み」か「全体 種類 人数 職種に含む文字 重み」</p>
             <textarea id="sc-needs" className="sc-textarea" rows={12} spellCheck={false} value={needsText} onChange={(e) => setNeedsText(e.target.value)} />
           </div>
         </div>
@@ -239,11 +372,154 @@ export default function ShiftChecker() {
                 {s} <b>{n}</b>
               </label>
             ))}
+            <span className="sc-score" data-testid="score">
+              {scoreText(result.score)}
+            </span>
             {days !== monthDays && (
               <span className="sc-warn-days">
                 表は {days} 日分、{settings.year}年{settings.month}月は {monthDays} 日
               </span>
             )}
+          </div>
+
+          <div className="sc-solve">
+            <div className="sc-buttons">
+              <button type="button" onClick={() => startSolve("fix")} disabled={solver.running}>
+                修正案を出す
+              </button>
+              <button type="button" onClick={() => startSolve("generate")} disabled={solver.running}>
+                {settings.year}年{settings.month}月を0から組む
+              </button>
+              {solver.running && (
+                <button type="button" onClick={solver.stop}>
+                  止める
+                </button>
+              )}
+              <label className="sc-seconds">
+                考える時間
+                <input type="number" min={1} max={60} value={seconds} onChange={(e) => setSeconds(Math.max(1, Number(e.target.value) || 1))} /> 秒
+              </label>
+            </div>
+            <p className="sc-hint">
+              修正案は、いまの表をなるべく少しだけ書き換えて、決まりに合わないところを減らします。
+              0から組むは、貼った表を手本に（職員・ユニット・その人が使っている記号を読み取って）年月の月を組みます。休み希望はその月のものを書いてください。
+            </p>
+            {solver.running && solver.progress && (
+              <p className="sc-progress" data-testid="solve-progress">
+                考えています… {(solver.progress.elapsed / 1000).toFixed(1)}秒、いちばん良い案は {scoreText(solver.progress.best.score)}
+              </p>
+            )}
+            {solver.error && (
+              <p className="sc-errors" role="alert">
+                {solver.error}
+              </p>
+            )}
+            {proposed && original && job && (
+              <div className="sc-proposal" role="status" data-testid="proposal">
+                <p>
+                  {job.mode === "fix" ? (
+                    <>
+                      <b>修正案</b>：元の表 {scoreText(original.score)} → 案 {scoreText(proposed.score)}、変えたマス {changes.size}
+                    </>
+                  ) : (
+                    <>
+                      <b>
+                        {settings.year}年{settings.month}月の案
+                      </b>
+                      ：{scoreText(proposed.score)}
+                    </>
+                  )}
+                </p>
+                <div className="sc-buttons" role="group" aria-label="表示する表">
+                  <button type="button" aria-pressed={!viewOriginal} onClick={() => setViewOriginal(false)}>
+                    案を表示
+                  </button>
+                  <button type="button" aria-pressed={viewOriginal} onClick={() => setViewOriginal(true)}>
+                    元の表を表示
+                  </button>
+                </div>
+                <p className="sc-hint">
+                  {job.mode === "fix"
+                    ? showingProposal
+                      ? "点線の枠が変えたマス。小さい取り消し線の記号が元の記号です。"
+                      : "元の表を表示しています。点線の枠が、案で変わるマスです。"
+                    : showingProposal
+                      ? "組んだ案を表示しています。"
+                      : "手本にした表を表示しています。"}
+                </p>
+                {job.mode === "fix" && changes.size > 0 && (
+                  <details className="sc-changes" open>
+                    <summary>変えたマス（{changes.size}）</summary>
+                    <ol data-testid="changes">
+                      {[...changes].map(([key, c]) => {
+                        const w = c.day <= monthDays ? weekday(settings.year, settings.month, c.day) : -1;
+                        return (
+                          <li key={key} data-selected={selected === key ? "" : undefined}>
+                            <button type="button" onClick={() => select(key, ".sc-grid")}>
+                              <span className="sc-num">{c.id}</span> {c.day}日{w >= 0 ? `（${WEEK[w]}）` : ""}{" "}
+                              <s className="sc-was-text">{c.from || "空"}</s> → <b>{c.to}</b>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </details>
+                )}
+                {diff && (
+                  <details className="sc-changes">
+                    <summary>
+                      直った指摘（{diff.fixed.length}）・新しく出た指摘（{diff.added.length}）
+                    </summary>
+                    <ul className="sc-diff-issues" data-testid="issue-diff">
+                      {diff.fixed.map((i) => (
+                        <li key={`f${issueId(i)}`} data-severity={i.severity}>
+                          <span className="sc-mark">直った</span>
+                          <span className="sc-tag">{i.severity}</span> {i.message}
+                        </li>
+                      ))}
+                      {diff.added.map((i) => (
+                        <li key={`a${issueId(i)}`} data-severity={i.severity}>
+                          <span className="sc-mark sc-mark-new">新しく出た</span>
+                          <span className="sc-tag">{i.severity}</span> {i.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                <div className="sc-buttons">
+                  <button type="button" onClick={adopt}>
+                    この案を採用する
+                  </button>
+                  <button type="button" onClick={copy}>
+                    {copied ? "コピーしました" : "案をコピー（Excel に貼れる）"}
+                  </button>
+                  <button type="button" onClick={closeProposal}>
+                    案を捨てる
+                  </button>
+                </div>
+              </div>
+            )}
+            <details className="sc-details">
+              <summary>職員ごとに使える記号（自動で直す・組むとき）</summary>
+              <p className="sc-hint">
+                1行に1人「番号: 日 早 遅 夜 公休14」。書いていない人は、表でその人が使っている記号だけを使います。「公休N」はその人の公休の基準（パートなど）
+              </p>
+              <textarea
+                id="sc-attrs"
+                aria-label="職員ごとに使える記号"
+                className="sc-textarea"
+                rows={5}
+                spellCheck={false}
+                placeholder={"A8: 日 休\nN1: 日 夜 明 休"}
+                value={attrsText}
+                onChange={(e) => setAttrsText(e.target.value)}
+              />
+              <div className="sc-buttons">
+                <button type="button" onClick={fillAttrs}>
+                  表から読み取って書き出す
+                </button>
+              </div>
+            </details>
           </div>
 
           <div className="sc-grid-wrap">
@@ -302,6 +578,8 @@ export default function ShiftChecker() {
                             severity={worst(issues)}
                             title={issues?.map((i) => i.message).join("\n")}
                             requested={result.requests.has(key)}
+                            was={showingProposal ? changes.get(key)?.from : undefined}
+                            will={showingProposal ? undefined : changes.get(key)?.to}
                             selected={selected === key}
                             onClick={issues ? () => select(key, ".sc-issues") : undefined}
                           />
@@ -360,7 +638,9 @@ export default function ShiftChecker() {
                 >
                   <button type="button" onClick={() => select(key, ".sc-grid")} disabled={!key}>
                     <span className="sc-tag">{i.severity}</span>
-                    <span className="sc-rule">{i.rule}</span>
+                    <span className="sc-rule">
+                      {i.rule}・{i.level}
+                    </span>
                     {i.message}
                   </button>
                 </li>
@@ -387,6 +667,9 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 interface CellProps {
   cellKey: string;
+  // 修正案で変わるマス。案を表示中は元の記号（was）、元の表を表示中は案の記号（will）
+  was?: string;
+  will?: string;
   code: string;
   def?: CodeDef;
   severity?: Severity;
@@ -396,7 +679,7 @@ interface CellProps {
   onClick?: () => void;
 }
 
-function Cell({ cellKey, code, def, severity, title, requested, selected, onClick }: CellProps) {
+function Cell({ cellKey, was, will, code, def, severity, title, requested, selected, onClick }: CellProps) {
   return (
     <td
       className="sc-cell"
@@ -405,9 +688,11 @@ function Cell({ cellKey, code, def, severity, title, requested, selected, onClic
       data-severity={severity}
       data-selected={selected ? "" : undefined}
       data-requested={requested ? "" : undefined}
-      title={title}
+      data-changed={was !== undefined || will !== undefined ? "" : undefined}
+      title={[title, was !== undefined && `元は「${was || "空"}」`, will !== undefined && `案では「${will}」`].filter(Boolean).join("\n") || undefined}
       onClick={onClick}
     >
+      {was !== undefined && <s className="sc-was">{was || "空"}</s>}
       {code}
     </td>
   );

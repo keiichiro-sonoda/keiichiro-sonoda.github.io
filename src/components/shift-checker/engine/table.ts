@@ -76,10 +76,11 @@ export function parseTable(text: string): ParseTableResult {
   return { roster: staff.length ? { days: dayCols.length, staff } : undefined, errors };
 }
 
-// 希望休: 1行に1人「番号: 3, 15, 22」（区切りは , 、 空白のどれでもよい）
+// 希望休: 1行に1人「番号: 3, 15, 22!」（区切りは , 、 空白のどれでもよい）。「!」を付けた日は必須
 export interface Request {
   id: string;
   day: number;
+  must?: boolean;
 }
 
 function parseDay(tok: string): number | undefined {
@@ -100,15 +101,44 @@ export function parseRequests(text: string): { requests: Request[]; errors: stri
     }
     const id = m[1].trim();
     for (const tok of m[2].split(/[,、\s]+/).filter(Boolean)) {
-      const day = parseDay(tok);
+      const must = /[!！]$/.test(tok);
+      const day = parseDay(tok.replace(/[!！]$/, ""));
       if (day === undefined) {
         errors.push(`希望休 ${i + 1}行目: 「${tok}」は日付として読めない`);
         continue;
       }
-      requests.push({ id, day });
+      requests.push(must ? { id, day, must } : { id, day });
     }
   });
   return { requests, errors };
+}
+
+// 職員ごとの設定:「番号: 日 早 遅 夜 公休14」。記号は自動で組むときに置いてよいもの、「公休N」はその人の公休の基準
+export function parseAttributes(text: string): { attrs: Map<string, { codes?: string[]; koukyu?: number }>; errors: string[] } {
+  const attrs = new Map<string, { codes?: string[]; koukyu?: number }>();
+  const errors: string[] = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.replace(/#.*/, "").trim();
+    if (!line) return;
+    const m = /^([^:：]+)[:：](.*)$/.exec(line);
+    if (!m) {
+      errors.push(`使える記号 ${i + 1}行目: 「番号: 記号 記号 …」の形になっていない`);
+      return;
+    }
+    const codes: string[] = [];
+    let koukyu: number | undefined;
+    for (const tok of m[2].split(/[,、\s]+/).filter(Boolean)) {
+      const k = /^公休(\d+)$/.exec(tok);
+      if (k) koukyu = Number(k[1]);
+      else codes.push(tok);
+    }
+    attrs.set(m[1].trim(), { ...(codes.length ? { codes } : {}), ...(koukyu !== undefined ? { koukyu } : {}) });
+  });
+  return { attrs, errors };
+}
+
+export function attributesText(attrs: Map<string, { codes?: string[]; koukyu?: number }>): string {
+  return [...attrs].map(([id, a]) => `${id}: ${[...(a.codes ?? []), ...(a.koukyu !== undefined ? [`公休${a.koukyu}`] : [])].join(" ")}`).join("\n");
 }
 
 // ユニットに属さない人を、人数を数えるときにどのユニットに入れるか。

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CODES_TEXT, parseCodes } from "./codes";
 import { DEFAULT_NEEDS_TEXT, parseNeeds } from "./rules";
 import { daysInMonth, weekday } from "./sample";
-import { parseAssignments, parseRequests, parseTable } from "./table";
+import { attributesText, parseAssignments, parseAttributes, parseRequests, parseTable } from "./table";
 
 const days = (n: number) => Array.from({ length: n }, (_, d) => String(d + 1));
 
@@ -38,7 +38,13 @@ describe("記号の表と人数の決まり", () => {
     expect(parseCodes(DEFAULT_CODES_TEXT).errors).toEqual([]);
     expect(parseCodes(DEFAULT_CODES_TEXT).table.get("リ")).toEqual({ code: "リ", kind: "日勤", tags: ["リーダー"] });
     expect(parseNeeds(DEFAULT_NEEDS_TEXT).errors).toEqual([]);
-    expect(parseNeeds(DEFAULT_NEEDS_TEXT).needs.at(-1)).toEqual({ scope: "facility", target: "夜勤", min: 1, role: "看護" });
+    expect(parseNeeds(DEFAULT_NEEDS_TEXT).needs.at(-1)).toEqual({ scope: "facility", target: "夜勤", min: 1, role: "看護", level: "必須" });
+  });
+  it("重みは職種の前でも後でもよく、書かなければ高", () => {
+    expect(parseNeeds("各ユニット 早 1\n全体 夜勤 1 低 看護").needs).toEqual([
+      { scope: "unit", target: "早", min: 1, level: "高" },
+      { scope: "facility", target: "夜勤", min: 1, role: "看護", level: "低" },
+    ]);
   });
   it("書き間違いを行番号つきで挙げる", () => {
     expect(parseCodes("休 公休\n休 公休\nX 何か").errors).toEqual([
@@ -62,6 +68,13 @@ describe("希望休", () => {
   it("読めない行と日付", () => {
     expect(parseRequests("A1 3\nA2: 32, x").errors).toHaveLength(3);
   });
+  it("「!」を付けた日は必須", () => {
+    expect(parseRequests("A1: 3!, 4！ 5").requests).toEqual([
+      { id: "A1", day: 3, must: true },
+      { id: "A1", day: 4, must: true },
+      { id: "A1", day: 5 },
+    ]);
+  });
 });
 
 describe("数え先", () => {
@@ -83,5 +96,15 @@ describe("暦", () => {
     expect(daysInMonth(2026, 2)).toBe(28);
     expect(daysInMonth(2026, 11)).toBe(30);
     expect(weekday(2026, 11, 1)).toBe(0);
+  });
+});
+
+describe("職員ごとに使える記号", () => {
+  it("記号と「公休N」を読み、書き出すと同じ形に戻る", () => {
+    const { attrs, errors } = parseAttributes("A8: 日 休\nN6: 日 夜 明 休 公休14\n# コメント");
+    expect(errors).toEqual([]);
+    expect(attrs.get("N6")).toEqual({ codes: ["日", "夜", "明", "休"], koukyu: 14 });
+    expect(attributesText(attrs)).toBe("A8: 日 休\nN6: 日 夜 明 休 公休14");
+    expect(parseAttributes("A8 日").errors).toHaveLength(1);
   });
 });

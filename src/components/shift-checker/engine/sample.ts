@@ -36,6 +36,8 @@ export interface Sample {
   table: string;
   requests: string;
   assignments: string;
+  // 7人で回す並びは30日で公休が8〜9日になるので、基準は9日
+  koukyuBase: number;
   units: string[];
 }
 
@@ -120,6 +122,7 @@ export function makeSample(): Sample {
     table: [header, ...lines].map((cells) => cells.join("\t")).join("\n"),
     requests,
     assignments: "S1: B",
+    koukyuBase: 9,
     units: ["A", "B"],
   };
 }

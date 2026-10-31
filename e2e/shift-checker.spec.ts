@@ -8,8 +8,10 @@ test.describe("勤務表のチェッカー", () => {
     await page.goto(URL);
     await page.getByRole("button", { name: "架空の表を入れてみる" }).click();
     const counts = page.getByTestId("counts");
-    await expect(counts.locator('[data-severity="違反"] b')).toHaveText("5");
-    await expect(counts.locator('[data-severity="注意"] b')).toHaveText("2");
+    // 違反は必須の決まり（夜勤の翌日）だけ。ほかは高・中の決まりなので注意
+    await expect(counts.locator('[data-severity="違反"] b')).toHaveText("1");
+    await expect(counts.locator('[data-severity="注意"] b')).toHaveText("7");
+    await expect(page.getByTestId("score")).toHaveText(/必須の違反 1・罰点 \d+/);
     await expect(page.getByTestId("issues")).toContainText("N2 の");
     await expect(page.getByTestId("issues")).toContainText("応援なら足りる");
     await expect(page.locator(".sc-grid .sc-unit", { hasText: "フロア→B" })).toBeVisible();
@@ -20,9 +22,56 @@ test.describe("勤務表のチェッカー", () => {
     await page.getByRole("button", { name: "架空の表を入れてみる" }).click();
     const counts = page.getByTestId("counts");
     await page.getByLabel("ユニット外の人の数え先").fill("S1: B\nS1: 23 A");
-    await expect(counts.locator('[data-severity="違反"] b')).toHaveText("5");
-    await expect(counts.locator('[data-severity="注意"] b')).toHaveText("1");
+    await expect(counts.locator('[data-severity="注意"] b')).toHaveText("6");
     await expect(page.getByTestId("issues")).not.toContainText("応援なら足りる");
+  });
+
+  test("修正案を出し、元の表と見比べ、採用すると表が置き換わる", async ({ page }) => {
+    await page.goto(URL);
+    await page.getByRole("button", { name: "架空の表を入れてみる" }).click();
+    await page.locator(".sc-seconds input").fill("2");
+    await page.getByRole("button", { name: "修正案を出す" }).click();
+    const proposal = page.getByTestId("proposal");
+    await expect(proposal).toContainText("修正案", { timeout: 15_000 });
+    await expect(proposal).toContainText(/案 必須の違反 0/);
+    const changedCells = page.locator(".sc-grid td[data-changed]");
+    const n = await changedCells.count();
+    expect(n).toBeGreaterThan(0);
+    // 変えたマスには元の記号が添えてあり、一覧の数と同じ
+    await expect(page.locator(".sc-grid td[data-changed] .sc-was")).toHaveCount(n);
+    await expect(page.getByTestId("changes").locator("li")).toHaveCount(n);
+    await expect(page.getByTestId("issue-diff")).toContainText("N2 の 25日の夜勤の翌日が明けでない");
+
+    // 一覧の行を押すと、表のそのマスが選ばれる
+    await page.getByTestId("changes").locator("button").first().click();
+    await expect(page.locator(".sc-grid td[data-selected][data-changed]")).toHaveCount(1);
+
+    // 元の表に切り替えても案は消えず、変わるマスに印が残る。また案に戻せる
+    await proposal.getByRole("button", { name: "元の表を表示" }).click();
+    await expect(page.getByTestId("counts").locator('[data-severity="違反"] b')).toHaveText("1");
+    await expect(changedCells).toHaveCount(n);
+    await expect(page.locator(".sc-grid .sc-was")).toHaveCount(0);
+    await proposal.getByRole("button", { name: "案を表示" }).click();
+    await expect(page.getByTestId("counts").locator('[data-severity="違反"] b')).toHaveText("0");
+
+    await proposal.getByRole("button", { name: "この案を採用する" }).click();
+    await expect(proposal).toHaveCount(0);
+    await expect(page.getByTestId("counts").locator('[data-severity="違反"] b')).toHaveText("0");
+    await expect(page.getByLabel("勤務表")).toHaveValue(/^番号\tユニット\t職種\t1\t/);
+  });
+
+  test("0 から組む。入力を変えると古い案は消える", async ({ page }) => {
+    await page.goto(URL);
+    await page.getByRole("button", { name: "架空の表を入れてみる" }).click();
+    await page.locator(".sc-seconds input").fill("2");
+    await page.getByRole("button", { name: "2026年11月を0から組む" }).click();
+    const proposal = page.getByTestId("proposal");
+    await expect(proposal).toContainText("2026年11月の案", { timeout: 15_000 });
+    await expect(proposal).toContainText("必須の違反 0");
+    await expect(page.locator(".sc-grid td[data-changed]")).toHaveCount(0);
+
+    await page.getByLabel("休み希望").fill("A1: 3");
+    await expect(proposal).toHaveCount(0);
   });
 
   test("一覧の行を押すと表のマスが光り、マスを押すと一覧の行が光る", async ({ page }) => {
@@ -33,7 +82,7 @@ test.describe("勤務表のチェッカー", () => {
     await expect(cell).toHaveCount(1);
     await expect(cell).toHaveAttribute("data-key", /^N2@\d+$/);
 
-    await page.locator('.sc-grid td[data-severity="注意"]').first().click();
+    await page.locator('.sc-grid td[data-key^="A3@"][data-severity]').first().click();
     await expect(page.locator(".sc-issues li[data-selected]")).toContainText("明けの翌日");
   });
 
